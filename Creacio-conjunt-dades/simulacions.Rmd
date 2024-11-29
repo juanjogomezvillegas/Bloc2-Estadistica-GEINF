@@ -1,0 +1,152 @@
+---
+title: "Conjunt de Dades"
+author: "Juan José Gómez Villegas, Hamza Essami, Joel Gil"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: bootstrap
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("simulacions.R")
+```
+
+# Introducció
+
+Per respondre a la pregunta. *Dels algoritmes que sabem implementar, quin és el millor?*, hem creat un conjunt de dades on hem provat 3 dels algoritmes que sabem implementar com:
+
+- l'Algoritme de la bombolla, **BubbleSort**
+
+- l'Algoritme **QuickSort**
+
+- l'Algoritme **MergeSort**
+
+En el nostre conjunt de dades hi tenim dues taules. Una on tenim la informació de cada algoritme que hem implementat fent servir el llenguatge C++, *executant el codi des de R*. I una altra on tenim la informació de cada simulació que hem fet amb cada algoritme fent servir vectors de mides diferents.
+
+Les simulacions les hem generat seguint els passos que hem après al qüestionari de *com executar codi c++ des de R* del moodle, i fent servir algunes funcions de la llibreria `tidyverse` i `dplyr` de R, també hem implementat les següents funcions de R per tal de fer les simulacions.
+
+```{r}
+generar_vector
+```
+
+La funció `generar_vector()`, a partir d'una llavor (`iseed`) i una longitud d'un vector (`n`), genera un vector desordenat de forma aleatòria.
+
+I una funció per cada algoritme que farà servir la funció `generar_vector()`, i retorna el temps d'execució.
+
+```{r}
+avalua_bubbleSort
+avalua_quickSort
+avalua_mergeSort
+```
+
+## Conjunt `d'algoritmes`
+
+Una taula conté informació de cada algoritme **dels que hem implementat**, i que conté variables independents com: el nom de l'algoritme, si l'algoritme és estable o no (entenent estabilitat com que l'algoritme manté el temps d'execució sense moltes variacions independentment de la mida del vector), i si l'algoritme té una implementació recursiva o no. En conclusió, aquest conjunt té l'estructura següent:
+
+```{r}
+glimpse(algoritmes)
+```
+
+## Conjunt de `Simulacions`
+
+Una altra taula conté el temps d'execució obtingut **en segons**, en cada execució de cada algoritme amb vectors de mides diferents (variables depenents), i també conté una variable independent que seria la mida del vector, aquest conjunt té l'estructura següent:
+
+```{r}
+glimpse(simulacions)
+```
+
+## Descriptiva del conjunt `Simulacions`
+
+I un cop tenim el conjunt de dades podem saber per exemple, la mitjana de temps **en segons** de cada algoritme.
+
+```{r}
+summarise(simulacions, 
+          bubblesort = mean(bubblesort), 
+          quicksort = mean(quicksort), 
+          mergesort = mean(mergesort))
+```
+
+També podríem saber les simulacions que hem fet amb cada mida de vector.
+
+```{r}
+count(simulacions, mida)
+```
+
+Tornant a la descriptiva anterior, també podríem saber les mitjanes del temps d'execució de cada algoritme en una mida de vector concreta.
+
+```{r}
+summarise(filter(simulacions, mida == 50), 
+          bubblesort = mean(bubblesort), 
+          quicksort = mean(quicksort), 
+          mergesort = mean(mergesort))
+```
+
+I fent servir la funció `summary()`, podem descriure cadascuna de les variables del nostre conjunt de dades (`simulacions`) de forma numèrica.
+
+```{r}
+summary(simulacions)
+```
+
+El mateix, però filtrant per les columnes interessants.
+
+```{r}
+summary(select(simulacions, mida, bubblesort, quicksort, mergesort))
+```
+
+# Gràfiques de les simulacions
+
+A part de descriure les variables numèricament o categòricament, també podem mostrar un gràfic per cada algoritme on es vegi com influeix la mida **eix y** en el temps d'execució **eix x**.
+
+## Temps d'execució/mida {.tabset}
+
+### BubbleSort
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = bubblesort))
+```
+
+### QuickSort
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = quicksort))
+```
+
+### MergeSort
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = mergesort))
+```
+
+## {.end}
+
+Potser ho veiem més clar fent servir un altre tipus de gràfic, com el gràfic de caixa.
+
+> També podem fer altres gràfics com, un histograma, un gràfic de barres, etc ...
+
+## Temps d'execució de cada algoritme {.tabset}
+
+### BubbleSort
+
+```{r}
+with(simulacions, boxplot(bubblesort), main = "Gràfic de caixa BubbleSort", xlab = 'Temps d\'execució', horizontal = TRUE)
+```
+
+### QuickSort
+
+```{r}
+with(simulacions, boxplot(quicksort), main = "Gràfic de caixa QuickSort", xlab = 'Temps d\'execució', horizontal = TRUE)
+```
+
+### MergeSort
+
+```{r}
+with(simulacions, boxplot(mergesort), main = "Gràfic de caixa MergeSort", xlab = 'Temps d\'execució', horizontal = TRUE)
+```
+
+## {.end}
