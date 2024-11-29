@@ -1,0 +1,332 @@
+---
+title: "Diari 3 - Posada en comú i focalització"
+author: "JHJ"
+date: "29/11/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("simulacions.RData")
+library(tidyverse)
+library(ggplot2)
+```
+
+## Pre-Processament de les dades
+
+Abans de tot podem convertir els temps d'execució de segons a minuts.
+
+```{r}
+simulacions = mutate(simulacions[c(1,2)], simulacions[c(3,4,5,6,7,8)]*60)
+```
+
+## Qüestions abordades
+
+_Escriviu les qüestions que heu decidit abordar._
+
+1. Quina és la forma dels errors, és a dir, si els errors segueixen una forma lineal, logarítmica, exponencial, etc...?
+
+2. Com podem modelar la v.a. `temps d'execució` d'un algoritme?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+Sobre la qüèstio __1__:
+
+$$
+T = f(n) + E\text{, on T i E són v.a.'s, i E} \approx \text{a un cert model ?}
+$$
+
+$$
+f(n) = \alpha + \beta \cdot n + \gamma \cdot n^2\text{, on }n^2\text{ correspon a la forma}
+$$
+
+- part determinista -> es la forma o linia
+
+- part aleatoria -> errors que surten del ajust del temps
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+Hem ampliat el nostre conjunt de dades per incloure proves de cada algoritme amb vectors ordenats, _a més de les proves amb vectors desordenats que ja teníem_.
+
+## Resultats
+
+_Resums i gràfics obtinguts._
+
+Per respondre a la qüèstio __1__, podem començar calculant l'SQT _o suma de quadrats totals_, i d'aquesta manera tindrem una idea de la variabilitat i la variància dels temps d'execució de cada algoritme _amb vectors desordenats_.
+
+```{r}
+SQT = tibble(
+  bubblesort = sum((simulacions$bubblesort - mean(simulacions$bubblesort))^2), 
+  quicksort = sum((simulacions$quicksort - mean(simulacions$quicksort))^2), 
+  mergesort = sum((simulacions$mergesort - mean(simulacions$mergesort))^2)
+)
+SQT
+```
+
+Amb vectors ordenats.
+
+```{r}
+SQT.ord = tibble(
+  bubblesort = sum((simulacions$ord.bubblesort - mean(simulacions$ord.bubblesort))^2), 
+  quicksort = sum((simulacions$ord.quicksort - mean(simulacions$ord.quicksort))^2), 
+  mergesort = sum((simulacions$ord.mergesort - mean(simulacions$ord.mergesort))^2)
+)
+SQT.ord
+```
+
+A partir d'aquí podem veure que tant per vectors desordenats com ordenats el que més errors _totals_ causa seria bubblesort, i el que menys seria quicksort _cas vectors desordenats_ o mergesort _cas vectors ordenats_, però també podem veure que bubblesort i mergesort minimitzen els errors __amb vectors ordenats__, al contrari de quicksort que causa més errors quan els vectors estan __ordenats__.
+
+El següent pas és ajustar un model que minimitzi els errors entre el temps de cada algoritme __amb vectors desordenats__ amb la funció $f(n)$ _definida als comentaris_ amb la forma que segueixen els errors de cada algoritme, per exemple: bubblesort podria ser de la forma de $(n^2)$, i mergesort i quicksort haurien de tenir la forma $(n \cdot log(n))$, tot i que quicksort és de $O(n^2)$ __en el cas pitjor__ amb vectors està ordenats.
+
+```{r}
+mods = list(
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+I amb vectors ordenats.
+
+```{r}
+mods.ord = list(
+  lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
+  lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+I podem visualitzar els models ajustats amb la funció `ggplot()`.
+
+### {.tabset}
+
+#### BubbleSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = bubblesort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods$lm.bubblesort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+#### QuickSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = quicksort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods$lm.quicksort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+#### MergeSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = mergesort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods$lm.mergesort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+### {.end}
+
+I també podem visualitzar els models ajustats dels temps quan els vectors estan ordenats.
+
+### {.tabset}
+
+#### BubbleSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = ord.bubblesort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods.ord$lm.bubblesort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+#### QuickSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = ord.quicksort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods.ord$lm.quicksort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+#### MergeSort
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = ord.mergesort)) +
+  geom_point(alpha = 0.5) +
+  geom_function(fun = function(x) predict(mods.ord$lm.mergesort, newdata = list(mida = x)), col = 'blue', linewidth = 2)
+```
+
+### {.end}
+
+I abans d'estudiar els residus (errors), podem calcular els errors que no hem explicat, o l'SQR.
+
+Per vectors desordenats.
+
+```{r}
+SQR1 = tibble(
+  bubblesort = sum((residuals(mods$lm.bubblesort))^2), 
+  quicksort = sum((residuals(mods$lm.quicksort))^2), 
+  mergesort = sum((residuals(mods$lm.mergesort))^2)
+)
+SQR1
+```
+
+Per vectors ordenats.
+
+```{r}
+SQR2 = tibble(
+  bubblesort = sum((residuals(mods.ord$lm.bubblesort))^2), 
+  quicksort = sum((residuals(mods.ord$lm.quicksort))^2), 
+  mergesort = sum((residuals(mods.ord$lm.mergesort))^2)
+)
+SQR2
+```
+
+I per calcular la proporció d'errors que hem aconseguit explicar amb cadascun dels models, podem calcular el coeficient de determinació $R^2$ seguint la fórmula.
+
+$$
+R^2 = \frac{SQM}{SQT} = 1 - \frac{SQR}{SQT}
+$$
+
+- __SQM__ és la part de l'SQT que sabem explicar, i __SQR__ és la part de l'SQT que __NO__ sabem explicar.
+
+```{r}
+tibble(
+  bubblesort = 1 - (SQR1$bubblesort/SQT$bubblesort), 
+  quicksort = 1 - (SQR1$quicksort/SQT$quicksort), 
+  mergesort = 1 - (SQR1$mergesort/SQT$mergesort)
+)
+```
+
+```{r}
+tibble(
+  bubblesort = 1 - (SQR2$bubblesort/SQT$bubblesort), 
+  quicksort = 1 - (SQR2$quicksort/SQT$quicksort), 
+  mergesort = 1 - (SQR2$mergesort/SQT$mergesort)
+)
+```
+
+On veiem que hem explicat més errors amb els models que ajusten el temps _amb vectors ordenats_ que amb vectors desordenats.
+
+I a continuació, ja podem començar a estudiar la forma dels erros, visualitzant-los amb l'histograma.
+
+### {.tabset}
+
+#### BubbleSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods$lm.bubblesort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+#### QuickSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods$lm.quicksort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+#### MergeSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods$lm.mergesort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+#### BubbleSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods.ord$lm.bubblesort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+#### QuickSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods.ord$lm.quicksort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+#### MergeSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = residuals(mods.ord$lm.mergesort))) + 
+  geom_histogram(bins = 100, col = 'black', fill = "#E0E0E0") + 
+  labs(x = 'residus o errors', y = 'mida')
+```
+
+### {.end}
+
+Conclusió, podríem dir que bubblesort té el mateix nombre d'errors tant amb vectors ordenats com desordenats, però quicksort i mergesort tenen més errors amb vectors ordenats. 
+
+
+
+
+### {.tabset}
+
+#### BubbleSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods$lm.bubblesort))) +
+  geom_point(alpha = 0.5)
+```
+
+#### QuickSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods$lm.quicksort))) +
+  geom_point(alpha = 0.5)
+```
+
+#### MergeSort `desordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods$lm.mergesort))) +
+  geom_point(alpha = 0.5)
+```
+
+#### BubbleSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods.ord$lm.bubblesort))) +
+  geom_point(alpha = 0.5)
+```
+
+#### QuickSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods.ord$lm.quicksort))) +
+  geom_point(alpha = 0.5)
+```
+
+#### MergeSort `ordenat`
+
+```{r}
+ggplot(data = simulacions, aes(x = mida, y = residuals(mods.ord$lm.mergesort))) +
+  geom_point(alpha = 0.5)
+```
+
+### {.end}
+
+Per tant, continuem dient la conclusió anterior. Llavors la forma dels residus podria ser una normal o una exponencial _mirant els histogrames_.
+
+## Noves qüestions
+
+_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l’equip._

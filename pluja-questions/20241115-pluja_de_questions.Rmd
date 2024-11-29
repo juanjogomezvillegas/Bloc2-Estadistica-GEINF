@@ -1,0 +1,62 @@
+---
+title: "Diari 1 - Pluja de qüestions"
+author: "JHJ"
+date: "15/11/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Qüestions que proposeu per arrancar el projecte
+
+_Escriviu les qüestions que us plantegeu realment. Poden ser molt concretes o més generals. No importa si us semblen simples o irrellevants._
+
+1. Quina distribució segueix els temps d'execució de cada algoritme? Segueix una normal, una exponencial, una uniforme, etc ...?
+
+2. La mida del vector és independent del temps d'execució de cada algoritme?
+
+3. Assumint que bubblesort és el més lent, el quicksort i el mergesort tenen el mateix temps d'execució _en mitjana_?
+
+4. Quin dels tres algoritmes és més millor _més eficient_?
+
+5. L'estabilitat de l'algoritme afecta al temps d'execució?
+
+6. El mateix que la **5**, però amb la recursivitat?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+- Sobre la pregunta número **1**, si sabem la distribució que segueixen les nostres dades, podríem saber si és compleixen les assumpcions dels testos que volem aplicar sobre el nostre conjunt de dades. Per exemple: si segueixen una normal podem aplicar algún dels testos que tinguin com a assumpcions la normalitat de la dades.
+
+- Per respondre a la pregunta número **3**, podriem plantejar un contrast amb l'hipòtesi nul·la, $H_0: \mu_{quicksort} = \mu_{mergesort}$
+
+- Per respondre a la pregunta número **4**, podriem plantejar un contrast amb l'hipòtesi nul·la, $H_0: \mu_{bubblesort} \leq \mu_{mergesort} \leq \mu_{quicksort}$
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+Per respondre a les preguntes necessitariem principalment les variables del conjunt de dades `simulacions`: mida, bubblesort, quicksort i mergesort. _Les tres últimes fan referència al temps d'execució_.
+
+I també algunes variables del conjunt `algoritmes`.
+
+## Altres informacions
+
+_Opcional, si creieu que aniria bé tenir altres dades o informacions addicionals._
+
+Potser, però de moment només faltaria executar els algoritmes amb mides de vector més petites. [Fet]{style="color:green"}
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l'equip._
+
+1. Ampliar el conjunt de dades `simulacions` per incloure mides de vector més petites que 50. [Fet]{style="color:green"}

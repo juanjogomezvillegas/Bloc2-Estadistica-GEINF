@@ -1,0 +1,255 @@
+---
+title: "Diari 2 - Primeres exploracions"
+author: "_Nom del grup_"
+date: "22/11/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+
+load("simulacions.RData")
+
+histograma = function(X) {
+  ggplot() +  
+  geom_histogram(aes(x = X, y= after_stat(density)), bins = 8, col = 'black', fill = "#E0E0E0") +
+  geom_function(aes(col = 'Normal'), linewidth = 1,
+                fun = function(x) dnorm(x, mean(X), sd(X))) +
+  geom_function(aes(col = 'Exponencial'), linewidth = 1,
+                fun = function(x) dexp(x, 1/mean(X))) +
+  geom_function(aes(col = 'Uniforme'), linewidth = 1,
+                fun = function(x) dunif(x, min(X), max(X))) +
+  labs(title = 'Histograma d\'X i densitats teòriques', 
+       y = 'Densitat', col = 'Models')
+}
+
+grafic.pp = function(X) {
+  dX = tibble(x = sort(X))
+  dF = mutate(dX, Fx = sapply(x, function(x) mean(X <= x)))
+  dF = dF %>%
+  mutate(
+    Fx_norm = pnorm(x, mean(X), sd(X)),
+    Fx_exp = pexp(x, 1/mean(X)),  
+    Fx_unif = punif(x, min(X), max(X)))
+  ggplot(data = dF) +
+    geom_point(aes(x = Fx_norm, y = Fx, col = 'Normal')) +
+    geom_point(aes(x = Fx_exp, y = Fx, col = 'Exponencial')) +
+    geom_point(aes(x = Fx_unif, y = Fx, col = 'Uniforme')) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dotted') +
+    labs(x = 'Funció de distribució teòrica', 
+         y = 'Funció de distribució de la mostra', 
+         col = 'Model')
+}
+
+grafic.qq = function(X) {
+  dX = tibble(x = sort(X))
+  dQ = mutate(dX, prob = ppoints(n()))
+  dQ = mutate(dQ,
+              qNorm = qnorm(prob, mean = mean(X), sd = sd(X)), 
+              qExp = qexp(prob, 1/mean(X)), 
+              qUnif = qunif(prob, min = min(X), max = max(X)))
+  ggplot() +
+    geom_point(data = dQ, aes(x = qNorm, y = x, col = 'Normal')) +
+    geom_point(data = dQ, aes(x = qExp, y = x, col = 'Exponencial')) +
+    geom_point(data = dQ, aes(x = qUnif, y = x, col = 'Uniforme')) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dotted') +
+    labs(col = 'Models', 
+         x = 'Quantil teòric',
+         y = 'Quantil mostral')
+}
+```
+
+## Qüestions abordades
+
+_Escriviu les qüestions que heu decidit abordar._
+
+1. Quina distribució segueix els temps d'execució de cada algoritme? Segueix una normal, una exponencial, una uniforme, etc ...?
+
+2. La mida del vector és independent del temps d'execució de cada algoritme?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+Qüestió **2**, podríem reformular la pregunta per: Hi 
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+## Resultats
+
+_Resums i gràfics obtinguts._
+
+1. Per respondre a la qüestió **1**, podem visualitzar cada algoritme amb un histograma.
+
+### {.tabset}
+
+#### Bubblesort
+
+```{r, echo=FALSE}
+histograma(simulacions$bubblesort)
+```
+
+#### Quicksort
+
+```{r, echo=FALSE}
+histograma(simulacions$quicksort)
+```
+
+#### Mergesort
+
+```{r, echo=FALSE}
+histograma(simulacions$mergesort)
+```
+
+### {.end}
+
+Podem veure que els temps dels tres algoritmes segueixen una normal, i en el cas del bublesort una exponencial, però no ho veiem del tot bé, ja que els histogrames resultants depen molt de com hem agafat la mostra.
+
+Per veure-ho millor podriem ajustar els errors, per exemple de quicksort i mergesort.
+
+```{r}
+f = function(x, a,b,c) a + b * x + c * x * log(x)
+mod.mergesort = nls(mergesort~a + b*mida+c*mida*log(mida), data = simulacions, start = list(a = 1, b = 1, c = 1))
+mod.quicksort = nls(quicksort~a + b*mida+c*mida*log(mida), data = simulacions, start = list(a = 1, b = 1, c = 1))
+```
+
+Podem desciure els models amb la funció `summary()`.
+
+```{r}
+summary(mod.mergesort)
+summary(mod.quicksort)
+```
+
+I visualitzar la recta que ajusta cadascun dels models.
+
+```{r, warning=FALSE}
+coefs = coef(mod.mergesort)
+f_opt = function(x) f(x, coefs[1], coefs[2], coefs[3])
+ggplot(data = simulacions) +
+  geom_point(aes(x = mida, y = mergesort)) +
+  geom_function(fun = f_opt, col = 'red')
+```
+
+```{r}
+coefs = coef(mod.quicksort)
+ggplot(data = simulacions) +
+  geom_point(aes(x = mida, y = quicksort)) +
+  geom_function(fun = f_opt, col = 'red')
+```
+
+Ara podem fer.
+
+```{r}
+lm.mergesort = lm(mergesort~mida, data=simulacions)
+lm.quicksort = lm(quicksort~mida, data=simulacions)
+```
+
+I podem visualitzar la recta com.
+
+```{r}
+coefs = coef(mod.mergesort)
+ggplot(data = simulacions) +
+  geom_point(aes(x = mida, y = mergesort)) +
+  geom_function(fun = f_opt, col = 'red') +
+  geom_abline(intercept = coef(mod.mergesort)[1], slope = coef(mod.mergesort)[2], col = 'blue')
+```
+
+```{r}
+coefs = coef(mod.quicksort)
+ggplot(data = simulacions) +
+  geom_point(aes(x = mida, y = quicksort)) +
+  geom_function(fun = f_opt, col = 'red') +
+  geom_abline(intercept = coef(mod.quicksort)[1], slope = coef(mod.quicksort)[2], col = 'blue')
+```
+
+Ara podem calcular l'SQR.
+
+```{r}
+e1 = residuals(mod.mergesort)
+SQR1 = sum(e1^2)
+e2 = residuals(mod.quicksort)
+SQR2 = sum(e2^2)
+SQR1
+SQR2
+```
+
+I l'SQT
+
+```{r}
+SQT1 = sum((simulacions$mergesort - mean(simulacions$mergesort))^2)
+SQT2 = sum((simulacions$quicksort - mean(simulacions$quicksort))^2)
+SQT1
+SQT2
+```
+
+Que ens permetra saber la porporció d'errors de quicksort i mergesort, a través del seu coeficient de determinacio, $R^2$.
+
+```{r}
+R21 = SQR1/SQT1
+R22 = SQR2/SQT2
+```
+
+I el que hem explicat de cada algoritme.
+
+```{r}
+1 - R21
+1 - R22
+```
+
+D'on veiem que amb el mergesort hem explicat el `r 1 - R21`% dels errors, i amb el quicksort hem explicat el `r 1 - R22`% dels errors.
+
+Quin dels dos explica millor el log n?
+
+```{r}
+mod.mergesort2 = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+SQR21 = sum(residuals(mod.mergesort2)^2)
+1-SQR21/SQT1
+```
+
+```{r}
+mod.quicksort2 = lm(quicksort~mida+I(mida*log(mida)), data = simulacions)
+SQR22 = sum(residuals(mod.quicksort2)^2)
+1-SQR22/SQT2
+```
+
+D'on veiem que tant el quicksort com el mergesort expliquen bastant bé log n. I ara ens podem preguntar, i el bubblesort?
+
+```{r}
+lm.bubblesort = lm(bubblesort~mida+I(mida*log(mida)), data=simulacions)
+SQR3 = sum(residuals(lm.bubblesort)^2)
+SQT3 = sum((simulacions$bubblesort - mean(simulacions$bubblesort))^2)
+1-SQR3/SQT3
+```
+
+D'on veiem que bubblesort explica molt millor el logaritme que els altres algoritmes.
+
+```{r}
+lm.bubblesort = lm(bubblesort~mida+I(mida^2), data=simulacions)
+SQR3 = sum(residuals(lm.bubblesort)^2)
+SQT3 = sum((simulacions$bubblesort - mean(simulacions$bubblesort))^2)
+1-SQR3/SQT3
+```
+
+I si provem amb el quadrat de la mida _$O(n^2)$_, també ho explica bastant més que els altres algoritmes.
+
+## Noves qüestions
+
+_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+
+1. Quina relació hi ha entre la mida de vector i l'algoritme? És a dir, si les dues variables tenen una correlació molt alta o molt baixa?
+
+2. La variància entre el temps obtingut i el teòric fa que l'algoritme sigui més fiable? _calcular l'error relatiu_
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l’equip._
