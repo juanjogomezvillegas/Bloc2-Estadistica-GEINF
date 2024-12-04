@@ -1,6 +1,6 @@
 ---
 title: "Diari 4 - Validació d'hipòtesis"
-author: "_Nom del grup_"
+author: "JHJ"
 date: "4/12/2024"
 output:
   html_document:
@@ -8,15 +8,42 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 load("simulacions.RData")
 library(tidyverse)
 library(ggplot2)
+library(patchwork)
 ```
 
 ## Pre-Processament de les dades
 
-> Important: En aquesta part treballarem amb el temps en segons.
+Abans de tot podem convertir els temps d'execució de segons a minuts.
+
+```{r}
+simulacions = mutate(simulacions[c(1,2)], simulacions[c(3,4,5,6,7,8)]*60)
+```
+
+## Funcions definides
+
+```{r}
+histograma = function(m) {
+  aux = mutate(simulacions, residus = residuals(m))
+  ggplot(data = aux) +
+    geom_histogram(aes(x = residus, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(aux$residus), sd(aux$residus))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(aux$residus), max = max(aux$residus)))
+}
+histograma2 = function(X) {
+  ggplot() +
+    geom_histogram(aes(x = X, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(X), sd(X))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(X), max = max(X)))
+}
+```
 
 ## Qüestions abordades
 
@@ -24,7 +51,7 @@ _Escriviu les qüestions que heu decidit abordar._
 
 1. Quina forma segueixen els errors?
 
-2. Els algoritmes segueixen l'ordre que haurien de seguir _segons la teoria_, p.ex. bubblesort és $O(n^2)$, i quicksort i mergesort són $O(n \cdot log(n))$?
+2. Els algoritmes segueixen l'ordre que haurien de seguir _segons la teoria_?
 
 3. Quin algorisme és més estable, és a dir, tenen la mateixa eficiència per vectors desordenats, com per vectors ordenats?
 
@@ -32,9 +59,11 @@ _Escriviu les qüestions que heu decidit abordar._
 
 _Qualsevol cosa que vulgueu afegir sobre les qüestions._
 
-- A la qüèstió __2__ podríem donar un interval de confiança, i després veure si encara segueixen l'ordre que ha de seguir _segons la teoria_.
+> La qüestió __1__ porta a la pregunta __2__, i les dues preguntes si distingim entre vectors ordenats i desordenats, porten a la pregunta __3__.
 
-- A la qüèstió __3__ podríem plantejar el següent contrast, i si podem assumir $H_0$, llavors es que es estable.
+- A la qüestió __1__ com a la qüèstió __2__, podríem donar un interval de confiança on poguem veure quina distribució segueix amb una probabilitat del $95\%$, i després veure si encara segueixen l'ordre que ha de seguir segons la teoria _2_, o quina distribució segueixen els residus _1_.
+
+- A la qüestió __3__ podríem plantejar el següent contrast de comparació de mitjanes, i si podem assumir $H_0$, llavors és que era estable.
 
 $$
 H_0: \mu_{ordenat} \leq \mu_{desordenat} \\
@@ -45,35 +74,312 @@ $$
 
 _Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
 
-__variables depenents__: Temps d'execució de cada algoritme (amb vectors ordenats i desordenats).
+__Variables dependents__: Temps d'execució de cada algoritme (amb vectors ordenats i desordenats).
 
-__variables indepnedents__: La mida del vector.
+__Variables independents__: La mida del vector, _tot i que encara podríem afegir el camp estable del conjunt algoritmes_.
 
 ## Resultats
 
 _Resums i gràfics obtinguts._
 
-Com que la nostra mostra és bastant gran, llavors.
+Responem a la pregunta principal, qüestió __1__, podem recuperar els models ajustats dels quals ja vam mostrar gràfics i calcular l'$R^2$ al diari anterior.
+
+Amb vectors desordenats.
+
+```{r}
+mods = list(
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+I amb vectors ordenats.
+
+```{r}
+mods.ord = list(
+  lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
+  lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+Molt ràpidament podem mostrar _com a recordatori_ la forma que segueixen els residus _o errors_ dels models que hem ajustat.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.bubblesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.quicksort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.mergesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### BubbleSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.bubblesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### QuickSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.quicksort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### MergeSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.mergesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+###  {.end}
+
+D'aquí podem dir que amb __vectors desordenats__: __bubblesort és el que causa més errors__, __mergesort estaria al mig__, i __quicksort seria el que causa menys errors__. Amb __vectors ordenats__ segueix __el mateix patró que amb vectors desordenats__, però amb __la diferència que entre tots els algoritmes semblen causar menys errors__ que amb vectors desordenats.
+
+Per tal d'estudiar la forma d'aquests errors ens pot ajudar, representar-los amb un histograma.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma(mods$lm.bubblesort)
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma(mods$lm.quicksort)
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma(mods$lm.mergesort)
+```
+
+#### BubbleSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.bubblesort)
+```
+
+#### QuickSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.quicksort)
+```
+
+#### MergeSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.mergesort)
+```
+
+###  {.end}
+
+I observant els gràfics anteriors, podem dir que tots semblen seguir __una normal amb mitjana a prop del 0__, però no podrien seguir una uniforme, ni tampoc una exponencial.
+
+Ara ja podem començar a fer inferència, per tal d'aconseguir un interval de confiança de la mitjana, en el que puguem dir si un algoritme segueix una certa distribució, o no. Com que la nostra mostra és bastant gran, llavors segons la teoria poder expressar la mitjana com.
 
 $$
 \overline{X} \approx N(\mu, \frac{\sigma}{\sqrt{n}})
 $$
 
+p.e. si considerem només els residus del bubblesort amb vectors desordenats, tenim que:
 
 ```{r}
-tibble(
-  bubblesort = "", 
-  quicksort = "", 
-  mergesort = ""
+aux = tibble(
+  mu = mean(residuals(mods$lm.bubblesort)), 
+  sigma = sd(residuals(mods$lm.bubblesort)), 
+  sqrt.n = sqrt(length(residuals(mods$lm.bubblesort)))
+)
+aux
+```
+
+```{r}
+# llavors la mitjana es pot aproximar a una Normal(mu, sigma/sqrt.n), i podem calcular l'interval de confiança amb els quartils
+c(qnorm(.025, mean = aux$mu, sd = aux$sigma/aux$sqrt.n), qnorm(.975, mean = aux$mu, sd = aux$sigma/aux$sqrt.n))
+```
+
+Com que els residus no semblen normal no podem fer servir la $t$-Student, però si que podem fer servir el mètode de Bootstrap, si l'apliquem al bubblesort amb vectors desordenats hem d'obtenir un interval semblant.
+
+```{r}
+quantile(replicate(5000, mean(sample(residuals(mods$lm.bubblesort), length(residuals(mods$lm.bubblesort)), replace = TRUE))), c(.025,.975))
+```
+
+i assumint normalitat dels residus.
+
+```{r}
+aux = residuals(mods$lm.bubblesort)
+sort(mean(aux) + qt(.025, length(aux)-1) * c(-1,1) * sd(aux) / sqrt(length(aux)))
+```
+
+D'aquí podríem definir la següent funció d'R que ens permetria calcular intervals de confiança per a cada algoritme.
+
+```{r}
+confidence.intervals = function(mostra, normalitat = FALSE) {
+  # si assumim normalitat apliquem la t-student
+  if (normalitat) {
+    sort(mean(mostra) + qt(.025,length(mostra)-1) * c(-1,1) * sd(mostra) / sqrt(length(mostra)))
+  } else {
+    # si no fem servir el mètode de bootstrap
+    res = replicate(length(mostra), mean(sample(mostra,length(mostra), replace = TRUE)))
+    quantile(res, c(.025,.975))
+  }
+}
+```
+
+I ja podem obtenir intervals de confiança per cada algoritme amb vectors desordenats, _i podem assumir o no normalitat dels residus_.
+
+```{r}
+int = tibble(
+  bubblesort = confidence.intervals(residuals(mods$lm.bubblesort)), 
+  quicksort = confidence.intervals(residuals(mods$lm.quicksort)), 
+  mergesort = confidence.intervals(residuals(mods$lm.mergesort))
+)
+int
+```
+
+I podem tornar a visualitzar l'histograma com.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.bubblesort)[between(residuals(mods$lm.bubblesort), int$bubblesort[1], int$bubblesort[2])])
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.quicksort)[between(residuals(mods$lm.quicksort), int$quicksort[1], int$quicksort[2])])
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.mergesort)[between(residuals(mods$lm.mergesort), int$mergesort[1], int$mergesort[2])])
+```
+
+###  {.end}
+
+Conclusió, els intervals construïts ens donen una manera més precisa d'obtenir regions de la nostra mostra per la mitjana real de la població estudi, en el nostre cas, __la mostra serien els residus dels models__, i construint intervals de confiança hem obtingut __una regió en què estem segurs que els residus segueixen una normal__, però no uniforme. I aixó ho podem dir __amb una probabilitat del $95\%$__.
+
+Mirant cas per cas, veiem que els residus del bubblesort segueixen millor una normal que el quicksort i el mergesort, on els residus van oscil·lant, és a dir, _van pujant i baixant._
+
+Repetim el procés pels vectors ordenats.
+
+```{r}
+int.ord = tibble(
+  bubblesort = confidence.intervals(residuals(mods.ord$lm.bubblesort)), 
+  quicksort = confidence.intervals(residuals(mods.ord$lm.quicksort)), 
+  mergesort = confidence.intervals(residuals(mods.ord$lm.mergesort))
+)
+int.ord
+```
+
+I si tornem a visualitzar l'histograma.
+
+###  {.tabset}
+
+#### BubbleSort *ordenat*
+
+```{r}
+histograma2(residuals(mods.ord$lm.bubblesort)[between(residuals(mods.ord$lm.bubblesort), int.ord$bubblesort[1], int.ord$bubblesort[2])])
+```
+
+#### QuickSort *ordenat*
+
+```{r}
+histograma2(residuals(mods.ord$lm.quicksort)[between(residuals(mods.ord$lm.quicksort), int.ord$quicksort[1], int.ord$quicksort[2])])
+```
+
+#### MergeSort *ordenat*
+
+```{r}
+histograma2(residuals(mods.ord$lm.mergesort)[between(residuals(mods.ord$lm.mergesort), int.ord$mergesort[1], int.ord$mergesort[2])])
+```
+
+###  {.end}
+
+I finalment veiem que el mergesort continua bastant igual, mentre que ara amb vectors ordenats, la mitjana del quicksort no està tant al centre, sinó que està situada més cap a la dreta. Per tant, podríem dir que amb vectors ordenats hi ha gairebé menys errors que amb vectors desordenats, i en concret _tant amb vectors ordenats com desordenats_, qui té menys errors és el quicksort, mentre que qui té més errors és el bubblesort, el mergesort es manté al mig.
+
+Per respondre a la qüestió __2__ seria repetir el procés fent el següent:
+
+```{r}
+int = tibble(
+  bubblesort = confidence.intervals(simulacions$bubblesort), 
+  quicksort = confidence.intervals(simulacions$quicksort), 
+  mergesort = confidence.intervals(simulacions$mergesort)
+)
+int
+```
+
+I amb vectors ordenats.
+
+```{r}
+int.ord = tibble(
+  bubblesort = confidence.intervals(simulacions$ord.bubblesort), 
+  quicksort = confidence.intervals(simulacions$ord.quicksort), 
+  mergesort = confidence.intervals(simulacions$ord.mergesort)
+)
+int.ord
+```
+
+I a la qüestió __3__, com hem dit als comentaris, només cal aplicar algun test que doni resposta al següent contrast:
+
+$$
+H_0: \mu_{ordenat} \leq \mu_{desordenat} \\
+H_1: \mu_{ordenat} > \mu_{desordenat}
+$$
+
+Si ho fem, com que les nostres dades no són normals, llavors __no es compliria__ l'assumpció que permetria aplicar la $t$-student.
+
+```{r}
+mostres = list(
+  bubblesort = simulacions$bubblesort[between(simulacions$bubblesort, int$bubblesort[1], int$bubblesort[2])], 
+  quicksort = simulacions$quicksort[between(simulacions$quicksort, int$quicksort[1], int$quicksort[2])], 
+  mergesort = simulacions$mergesort[between(simulacions$mergesort, int$mergesort[1], int$mergesort[2])]
+)
+mostres.ord = list(
+  bubblesort = simulacions$ord.bubblesort[between(simulacions$ord.bubblesort, int.ord$bubblesort[1], int.ord$bubblesort[2])], 
+  quicksort = simulacions$ord.quicksort[between(simulacions$ord.quicksort, int.ord$quicksort[1], int.ord$quicksort[2])], 
+  mergesort = simulacions$ord.mergesort[between(simulacions$ord.mergesort, int.ord$mergesort[1], int.ord$mergesort[2])]
 )
 ```
 
-
-
+Apliquem el `shapiro.test()`.
 
 ```{r}
-quantile(replicate(1000, mean(sample(simulacions$bubblesort, 20, replace = TRUE))), c(.095,.975))
+shapiro.test(mostres$bubblesort)
+shapiro.test(mostres$quicksort)
+shapiro.test(mostres$mergesort)
+shapiro.test(mostres.ord$bubblesort)
+shapiro.test(mostres.ord$quicksort)
+shapiro.test(mostres.ord$mergesort)
 ```
+
+I veiem que només és normal el bubblesort amb vectors desordenats. Per tant, no podem aplicar la $t$-student, _només la podem aplicar a on puguem assumir normalitat de les dades/residus_.
 
 ## Noves qüestions
 
@@ -82,6 +388,8 @@ _Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
 ## Material addicional
 
 _Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+Apunts del moodle d'estadística.
 
 ## Llista de tasques
 
