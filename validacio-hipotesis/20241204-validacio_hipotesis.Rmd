@@ -1,0 +1,88 @@
+---
+title: "Diari 4 - Validació d'hipòtesis"
+author: "_Nom del grup_"
+date: "4/12/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("simulacions.RData")
+library(tidyverse)
+library(ggplot2)
+```
+
+## Pre-Processament de les dades
+
+> Important: En aquesta part treballarem amb el temps en segons.
+
+## Qüestions abordades
+
+_Escriviu les qüestions que heu decidit abordar._
+
+1. Quina forma segueixen els errors?
+
+2. Els algoritmes segueixen l'ordre que haurien de seguir _segons la teoria_, p.ex. bubblesort és $O(n^2)$, i quicksort i mergesort són $O(n \cdot log(n))$?
+
+3. Quin algorisme és més estable, és a dir, tenen la mateixa eficiència per vectors desordenats, com per vectors ordenats?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+- A la qüèstió __2__ podríem donar un interval de confiança, i després veure si encara segueixen l'ordre que ha de seguir _segons la teoria_.
+
+- A la qüèstió __3__ podríem plantejar el següent contrast, i si podem assumir $H_0$, llavors es que es estable.
+
+$$
+H_0: \mu_{ordenat} \leq \mu_{desordenat} \\
+H_1: \mu_{ordenat} > \mu_{desordenat}
+$$
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+__variables depenents__: Temps d'execució de cada algoritme (amb vectors ordenats i desordenats).
+
+__variables indepnedents__: La mida del vector.
+
+## Resultats
+
+_Resums i gràfics obtinguts._
+
+Com que la nostra mostra és bastant gran, llavors.
+
+$$
+\overline{X} \approx N(\mu, \frac{\sigma}{\sqrt{n}})
+$$
+
+
+```{r}
+tibble(
+  bubblesort = "", 
+  quicksort = "", 
+  mergesort = ""
+)
+```
+
+
+
+
+```{r}
+quantile(replicate(1000, mean(sample(simulacions$bubblesort, 20, replace = TRUE))), c(.095,.975))
+```
+
+## Noves qüestions
+
+_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l’equip._
