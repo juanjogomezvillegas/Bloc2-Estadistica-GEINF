@@ -1,0 +1,294 @@
+---
+title: "Informe intermig"
+author: "JHJ"
+date: "20/12/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("simulacions.RData")
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+histograma = function(m) {
+  aux = mutate(simulacions, residus = residuals(m))
+  ggplot(data = aux) +
+    geom_histogram(aes(x = residus, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(aux$residus), sd(aux$residus))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(aux$residus), max = max(aux$residus)))
+}
+```
+
+## Pre-Processament de les dades
+
+Abans de tot podem convertir els temps d'execució de segons a minuts.
+
+```{r}
+simulacions = mutate(simulacions[c(1,2)], simulacions[c(3,4,5,6,7,8)]*60)
+```
+
+## Qüestió principal
+
+La qüestió principal que estem estudiant és, quina és la forma dels errors? És a dir, si els errors segueixen una forma lineal, logarítmica, exponencial, etc...?
+
+La qüestió principal porta a preguntar-nos, com podem modelar la v.a. `temps d'execució` d'un algoritme?
+
+## Conjunt de dades
+
+En el nostre conjunt de dades hi tenim dues taules. Una on tenim la informació de cada algoritme que hem implementat fent servir el llenguatge C++, *executant el codi des de R*. I una altra on tenim la informació de cada simulació que hem fet amb cada algoritme fent servir vectors de mides diferents, ordenats i desordenats.
+
+Les simulacions les vam generar seguint els passos que vam aprendre al qüestionari de *com executar codi c++ des de R* del moodle, i fent servir algunes funcions de la llibreria `tidyverse` i `dplyr` de R, també vam implementar algunes funcions d'R que generaven les simulacions.
+
+Per saber quines variables hi ha, i quantes observacions s'han generat podem fer servir la funció `glimpse()` amb el conjunt de dades `algoritmes`. Aquesta taula conté informació de cada algoritme **dels que hem implementat**, i que conté variables independents com: el nom de l'algoritme, si l'algoritme és estable o no (entenent estabilitat com que l'algoritme manté el temps d'execució sense moltes variacions independentment de la mida del vector, ordenat i desordenat), i si l'algoritme té una implementació recursiva o no. En conclusió, aquest conjunt té l'estructura següent:
+
+```{r}
+glimpse(algoritmes)
+```
+
+I ara provem amb el conjunt de dades `simulacions`, el conjunt principal de l'estudi, ja que conté els temps d'execució **en segons** de cada algoritme, *tot i que fem un pre-processament d'aquests temps per a que apareixin en minuts*. Aquesta taula, també conté una variable independent que seria la mida del vector, finalment aquest conjunt té l'estructura següent:
+
+```{r}
+glimpse(simulacions)
+```
+
+A partir d'aquí vam fer una descriptiva del conjunt `simulacions` fent servir la funció `summary()` com.
+
+```{r}
+summary(simulacions)
+```
+
+I també vam poder visualitzar les simulacions amb la funció `ggplot()`.
+
+## {.tabset}
+
+### BubbleSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = bubblesort))
+```
+
+### QuickSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = quicksort))
+```
+
+### MergeSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = mergesort))
+```
+
+### BubbleSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.bubblesort))
+```
+
+### QuickSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.quicksort))
+```
+
+### MergeSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.mergesort))
+```
+
+## {.end}
+
+Visualitzant les gràfiques, és quan ens vam preguntar quina és la forma dels errors i com podem modelar la v.a. `temps d'execució` de cada algoritme, si el resultat variava molt quan el vector ja estava ordenat.
+
+## Resultats sobre la qüestió principal
+
+Per respondre a la qüestió principal vam ajustar alguns models, que calculant el seu $R^2$, vam comprovar que explicaven bastant bé els errors.
+
+```{r, include=FALSE}
+SQT = tibble(
+  bubblesort = sum((simulacions$bubblesort - mean(simulacions$bubblesort))^2), 
+  quicksort = sum((simulacions$quicksort - mean(simulacions$quicksort))^2), 
+  mergesort = sum((simulacions$mergesort - mean(simulacions$mergesort))^2)
+)
+SQT.ord = tibble(
+  bubblesort = sum((simulacions$ord.bubblesort - mean(simulacions$ord.bubblesort))^2), 
+  quicksort = sum((simulacions$ord.quicksort - mean(simulacions$ord.quicksort))^2), 
+  mergesort = sum((simulacions$ord.mergesort - mean(simulacions$ord.mergesort))^2)
+)
+mods = list(
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+mods.ord = list(
+  lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
+  lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+Aquests models eren els següents:
+
+```{r}
+mods
+mods.ord
+```
+
+```{r, include=FALSE}
+SQR = tibble(
+  bubblesort = sum((residuals(mods$lm.bubblesort))^2), 
+  quicksort = sum((residuals(mods$lm.quicksort))^2), 
+  mergesort = sum((residuals(mods$lm.mergesort))^2)
+)
+SQR.ord = tibble(
+  bubblesort = sum((residuals(mods.ord$lm.bubblesort))^2), 
+  quicksort = sum((residuals(mods.ord$lm.quicksort))^2), 
+  mergesort = sum((residuals(mods.ord$lm.mergesort))^2)
+)
+```
+
+I el seu $R^2$ era el següent:
+
+```{r}
+tibble(
+  bubblesort = 1 - (SQR$bubblesort/SQT$bubblesort), 
+  quicksort = 1 - (SQR$quicksort/SQT$quicksort), 
+  mergesort = 1 - (SQR$mergesort/SQT$mergesort)
+)
+```
+
+```{r}
+tibble(
+  bubblesort.ord = 1 - (SQR.ord$bubblesort/SQT.ord$bubblesort), 
+  quicksort.ord = 1 - (SQR.ord$quicksort/SQT.ord$quicksort), 
+  mergesort.ord = 1 - (SQR.ord$mergesort/SQT.ord$mergesort)
+)
+```
+
+I podem veure que són bons models, i que podem fer servir per estudiar la forma dels errors, _qüestió principal_.
+
+Els errors tenien la forma següent:
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.bubblesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.quicksort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods$lm.mergesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### BubbleSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.bubblesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### QuickSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.quicksort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+#### MergeSort *ordenat*
+
+```{r}
+ggplot(data = mutate(simulacions, residus = residuals(mods.ord$lm.mergesort))) +
+  geom_point(aes(x = mida, y = residus))
+```
+
+###  {.end}
+
+També podíem visualitzar-los amb un histograma.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma(mods$lm.bubblesort)
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma(mods$lm.quicksort)
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma(mods$lm.mergesort)
+```
+
+#### BubbleSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.bubblesort)
+```
+
+#### QuickSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.quicksort)
+```
+
+#### MergeSort *ordenat*
+
+```{r}
+histograma(mods.ord$lm.mergesort)
+```
+
+###  {.end}
+
+I observant els gràfics, podem tenir alguna sospita sobre quina és la forma dels errors.
+
+## Principals sospites sobre la qüestió principal
+
+La sospita sobre la qüestió principal mirant els gràfics, podem dir que tots semblen seguir __una normal amb mitjana a prop del 0__, però no podrien seguir una uniforme, i menys encara poden seguir una exponencial.
+
+## Qüestions secundàries
+
+Les qüestions secundaries han estat les següents:
+
+1. La mida del vector és independent del temps d'execució de cada algoritme?
+
+2. Els algoritmes segueixen l'ordre que haurien de seguir _segons la teoria_, p.ex. bubblesort és $O(n^2)$, i quicksort i mergesort són $O(n \cdot log(n))$?
+
+3. Quin algorisme és més estable? És a dir, tenen la mateixa eficiència per vectors desordenats com per vectors ordenats?
+
+## Resultats i Sospites sobre les qüestions secundàries
+
+Sobre la qüestió __1__, vam veure que són independents visualitzant les gràfiques que vam fer per descriure les dades.
+
+Sobre la qüestió __2__, vam comprovar que seguien l'ordre que és diu a la teoria, quan vam ajustar un model per cada algoritme _amb vectors ordenats i desordenats_, per respondre a la qüestió principal.
+
+Sobre la qüestió __3__, també podem veure si es estable o no veient els gràfics, p.e. si el temps d'un algoritme té la mateixa forma _p.e. $O(n^2)$_ tant amb vectors ordenats com amb desordenats, llavors podem dir que l'algoritme és estable. Altrament, no és estable.
