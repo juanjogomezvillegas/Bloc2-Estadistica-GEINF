@@ -1,0 +1,313 @@
+---
+title: "Diari 5 - Inferència"
+author: "_Nom del grup_"
+date: "23/12/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("simulacions.RData")
+library(tidyverse)
+library(ggplot2)
+library(patchwork)
+library(lmtest)
+```
+
+## Qüestions abordades
+
+_Escriviu les qüestions que heu decidit abordar._
+
+1. Un cop hem vist que els temps de cada algoritme _en general_ no són normals, ni sembla que siguin homoscedastics. Ara ens preguntem, si els residus són normals per regions?
+
+2. Quina és la tendència  dels residus?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+- Sobre la qüestió __1__, agafarem les regions de la variable mida: [0,250],[250,500],[500,750],[750,1000]
+
+- Sobre la qüestió __2__, per analitzar la tendència dels residus calcularem l'arrel dels errors amb valors absolut, seguint la fórmula $\sqrt{|residus|}$, i d'aquest resultat ajustar un model com, $\sqrt{|residus|}$~$mida$.
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+Temps d'execució de cada algoritme i la mida del vector. I ara, ens centrarem només en els temps d'execució __amb vectors desordenats__.
+
+## Resultats
+
+_Resums i gràfics obtinguts._
+
+```{r, include=FALSE}
+mods = list(
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+mods.ord = list(
+  lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
+  lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+Per començar, comprovarem la normalitat del nostre conjunt de dades en general. Aplicant el test `shapiro.test` que doni resposta al següent contrast:
+
+$$
+H_0: \text{Els residus són normals} \\
+H_1: \text{Els residus no són normals}
+$$
+
+```{r}
+list(
+  shapiro.test(residuals(mods$lm.bubblesort)), 
+  shapiro.test(residuals(mods$lm.quicksort)), 
+  shapiro.test(residuals(mods$lm.mergesort))
+)
+```
+
+En general, el p-value de cada algoritme és menor a un nivell $\alpha = 0.05$, per tant, tenim evidències en contra de la normalitat.
+
+Ens guardem els residus de cada model/algoritme.
+
+```{r}
+simulacions.res = mutate(simulacions, 
+                         bubblesort.residus = residuals(mods$lm.bubblesort), 
+                         quicksort.residus = residuals(mods$lm.quicksort), 
+                         mergesort.residus = residuals(mods$lm.mergesort))
+```
+
+I filtrem per les regions descrites a dalt.
+
+```{r}
+regions.residus = list(filter(simulacions.res, mida >= 0 & mida < 250),
+                       filter(simulacions.res, mida >= 250 & mida < 500), 
+                       filter(simulacions.res, mida >= 500 & mida < 750), 
+                       filter(simulacions.res, mida >= 750 & mida <= 1000))
+```
+
+I ara podem comprovar la normalitat en cada regió.
+
+```{r}
+sapply(regions.residus, function(x) shapiro.test(x$bubblesort.residus))
+sapply(regions.residus, function(x) shapiro.test(x$quicksort.residus))
+sapply(regions.residus, function(x) shapiro.test(x$mergesort.residus))
+```
+
+On veiem que en cap regió podem assumir normalitat dels residus. Comprovem ara si podem assumir homocedasticitat.
+
+$$
+H_0: \text{Els residus són homocedastics} \\
+H_1: \text{Els residus no són homocedastics}
+$$
+
+```{r}
+bptest(mods$lm.bubblesort)
+bptest(mods$lm.quicksort)
+bptest(mods$lm.mergesort)
+```
+
+On veiem que els residus són heterocedastics, i per tant, tenen una tendència que podem mostrar fent.
+
+```{r}
+calcul.arrel = function(x) {
+  sqrt(abs(x))
+}
+```
+
+I ja podem visualitzar la tendència.
+
+```{r}
+veure.tendencia = function(x) {
+  suavitza = with(simulacions.res,
+                lowess(mida, calcul.arrel(x)))
+  ggplot(data = simulacions.res) +
+    geom_point(aes(x = mida, y = calcul.arrel(x)), alpha = 0.05) +
+    geom_line(data = as_tibble(suavitza), aes(x=x,y=y), col = 'blue') + 
+    scale_x_continuous(trans = "log10") + 
+    scale_y_continuous(trans = "log10")
+}
+```
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$bubblesort.residus)
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$quicksort.residus)
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$mergesort.residus)
+```
+
+###  {.end}
+
+I observant els gràfics, podem veure com el bubblesort és el que creix més, i el quicksort i el mergesort són els que semblen més homocedastics, però no es veu molt clar, per tal de veure-ho més clar, podem fer una transformació logaritmica dels temps de cada algoritme __amb vectors desordenats__, i la mida.
+
+```{r}
+rm(simulacions.res)
+simulacions.res = mutate(simulacions, 
+                         l_mida = log(mida), 
+                         l_bubblesort = log(bubblesort), 
+                         l_quicksort = log(quicksort), 
+                         l_mergesort = log(mergesort))
+```
+
+Tornem a ajustar un nou model amb el logaritme dels temps i la mida.
+
+```{r}
+mods.log = list(
+  lm.bubblesort = lm(l_bubblesort~l_mida+I(l_mida^2), data = simulacions.res),  
+  lm.quicksort = lm(l_quicksort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res), 
+  lm.mergesort = lm(l_mergesort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res)
+)
+```
+
+Ara tornem a comprovar la hipòtesi de normalitat.
+
+$$
+H_0: \text{Els residus són normals} \\
+H_1: \text{Els residus no són normals}
+$$
+
+```{r}
+list(
+  shapiro.test(residuals(mods.log$lm.bubblesort)), 
+  shapiro.test(residuals(mods.log$lm.quicksort)), 
+  shapiro.test(residuals(mods.log$lm.mergesort))
+)
+```
+
+On veiem que ara en general, el p-value de cada algoritme segueix siguent menor a un nivell $\alpha = 0.05$, per tant, tenim evidències en contra de la normalitat.
+
+Ens guardem els residus de cada model/algoritme.
+
+```{r}
+simulacions.res = mutate(simulacions.res, 
+                         bubblesort.residus = residuals(mods.log$lm.bubblesort), 
+                         quicksort.residus = residuals(mods.log$lm.quicksort), 
+                         mergesort.residus = residuals(mods.log$lm.mergesort))
+```
+
+I filtrem per les regions descrites a dalt.
+
+```{r}
+regions.residus = list(filter(simulacions.res, mida >= 0 & mida < 250),
+                       filter(simulacions.res, mida >= 250 & mida < 500), 
+                       filter(simulacions.res, mida >= 500 & mida < 750), 
+                       filter(simulacions.res, mida >= 750 & mida <= 1000))
+```
+
+I ara podem comprovar la normalitat en cada regió.
+
+```{r}
+sapply(regions.residus, function(x) shapiro.test(x$bubblesort.residus))
+sapply(regions.residus, function(x) shapiro.test(x$quicksort.residus))
+sapply(regions.residus, function(x) shapiro.test(x$mergesort.residus))
+```
+
+On veiem que en cap regió segueix rebutjant la normalitat dels residus. Comprovem ara si podem assumir homocedasticitat.
+
+$$
+H_0: \text{Els residus són homocedastics} \\
+H_1: \text{Els residus no són homocedastics}
+$$
+
+```{r}
+bptest(mods.log$lm.bubblesort)
+bptest(mods.log$lm.quicksort)
+bptest(mods.log$lm.mergesort)
+```
+
+I veiem que continuen siguent molt heterocedastics.
+
+Si provem a visualitzar els residus mitjançant un gràfic, obtenim.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$bubblesort.residus)
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$quicksort.residus)
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+veure.tendencia(simulacions.res$mergesort.residus)
+```
+
+###  {.end}
+
+I observant els gràfics, ara podem veure, que els residus ara semblen bastant homocedastics amb un biaix cap a la dreta.
+
+Conclusió, els residus no segueixen una normal, però els podem aproximar a una normal amb biaix cap a la dreta, és a dir, a una distribució __skew normal__
+
+```{r}
+skewNormal = function(x) (sqrt(2*(acos(-1))))^(-1) * exp(-x^2/2)
+ggplot() +
+    geom_histogram(aes(x = -skewNormal(simulacions.res$l_mida), y = after_stat(density)))
+```
+
+------
+
+Finalment, podem ajustar els models següents:
+
+```{r}
+mods.arrel = list(
+  lm.bubblesort = lm(calcul.arrel(bubblesort.residus)~mida, data = simulacions.res),  
+  lm.quicksort = lm(calcul.arrel(quicksort.residus)~mida, data = simulacions.res), 
+  lm.mergesort = lm(calcul.arrel(mergesort.residus)~mida, data = simulacions.res)
+)
+mods.arrel
+```
+
+I comprovar el següent contrast de significació:
+
+$$
+\beta_j = 0 \\
+\beta_j \neq 0
+$$
+
+Per respondre al contrast, podem fer servir la funció `summary()`.
+
+```{r}
+summary(mods.arrel$lm.bubblesort)
+summary(mods.arrel$lm.quicksort)
+summary(mods.arrel$lm.mergesort)
+```
+
+Veient els valor-p, tenim evidències en contra de la hipotesi nul·la. Per tant, podem assumir que totes les variables són diferent de 0.
+
+## Noves qüestions
+
+_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+[skewnormal]{https://www.google.com/search?client=firefox-b-d&q=skewnormal}
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l’equip._
