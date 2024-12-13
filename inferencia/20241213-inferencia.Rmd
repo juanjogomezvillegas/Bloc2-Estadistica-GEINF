@@ -10,6 +10,7 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 load("simulacions.RData")
+library(sn)
 library(tidyverse)
 library(ggplot2)
 library(patchwork)
@@ -263,9 +264,9 @@ I observant els gràfics, ara podem veure, que els residus ara semblen bastant h
 Conclusió, els residus no segueixen una normal, però els podem aproximar a una normal amb biaix cap a la dreta, és a dir, a una distribució __skew normal__
 
 ```{r}
-skewNormal = function(x) (sqrt(2*(acos(-1))))^(-1) * exp(-x^2/2)
+skewNormal = psn(simulacions.res$l_mida, mean(simulacions.res$l_mida), sd(simulacions.res$l_mida), -4)
 ggplot() +
-    geom_histogram(aes(x = -skewNormal(simulacions.res$l_mida), y = after_stat(density)))
+    geom_histogram(aes(x = skewNormal, y = after_stat(density)))
 ```
 
 ------
