@@ -1,0 +1,174 @@
+---
+title: "Diari 6 - Inferència i conclusions"
+author: "JHJ"
+date: "20/12/2024"
+output:
+  html_document:
+    self_contained: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+load("simulacions.RData")
+library(sn) # skew normal
+library(tidyverse)
+library(gtsummary)
+library(ggplot2)
+library(patchwork)
+library(lmtest)
+
+# funcions o utilitats
+```
+
+## Qüestions abordades
+
+_Escriviu les qüestions que heu decidit abordar._
+
+1. Quines conclusions podem extreure de la resta de diaris?
+
+## Comentaris
+
+_Qualsevol cosa que vulgueu afegir sobre les qüestions._
+
+- Al diari anterior, vam veure que les nostres dades semblen més homocedastiques aplicant una transformació logarítmica, i també vam veure que les nostres dades intenten ajustar-se a una skew normal amb $\alpha \pm 4$ sense molt d'èxit.
+
+## Variables relacionades
+
+_Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà considerar?_
+
+- log(Temps d'execució de cada algoritme)
+
+- log(mida del vector)
+
+## Resultats
+
+_Resums i gràfics obtinguts._
+
+Primer, recordem la transformació logarítmica, i que graciès a això no podem assumir homocedasticitat, però almenys estem més a prop de poder assumir-la.
+
+```{r}
+simulacions.res = mutate(simulacions, 
+                         l_mida = log(mida), 
+                         l_bubblesort = log(bubblesort), 
+                         l_quicksort = log(quicksort), 
+                         l_mergesort = log(mergesort))
+```
+
+I tornem a ajustar els models ajustats en diaris anteriors.
+
+```{r}
+mods = list(
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+mods.ord = list(
+  lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
+  lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
+  lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
+)
+```
+
+A continuació podem fer alguna descriptiva de les dades. Començant per la mida, comparant-la amb log(mida).
+
+```{r}
+summary(select(simulacions.res, mida, l_mida))
+```
+
+I el mateix però amb els temps. Però en aquest, comparem els temps __amb vectors desordenats__, els temps __amb vectors ordenats__, i el log(temps).
+
+```{r}
+summary(select(simulacions.res, bubblesort, ord.bubblesort, l_bubblesort, quicksort, ord.quicksort, l_quicksort, mergesort, ord.mergesort, l_mergesort))
+```
+
+Centrant-nos amb la mitjana _en general_.
+
+Amb vectors desordenats.
+
+```{r}
+summarise(simulacions.res, 
+          bubblesort = mean(bubblesort), 
+          quicksort = mean(quicksort), 
+          mergesort = mean(mergesort))
+```
+
+Amb vectors ordenats.
+
+```{r}
+summarise(filter(simulacions, mida == 50), 
+          bubblesort = mean(ord.bubblesort), 
+          quicksort = mean(ord.quicksort), 
+          mergesort = mean(ord.mergesort))
+```
+
+D'on veiem com es comporten els temps de cada algoritme amb vectors desordenats i ordenats.
+
+Veient-lo gràficament, vam veure com es comporta cada algortime amb els dos tipus de vectors, _ordenats i desordenats_.
+
+## {.tabset}
+
+### BubbleSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = bubblesort))
+```
+
+### QuickSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = quicksort))
+```
+
+### MergeSort _desordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = mergesort))
+```
+
+### BubbleSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.bubblesort))
+```
+
+### QuickSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.quicksort))
+```
+
+### MergeSort _ordenat_
+
+```{r}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.mergesort))
+```
+
+## {.end}
+
+I vam veure que bubblesort i mergesort mantenen la forma, mentre que el quicksort amb vectors ordenats es comporta semblant al bubblesort, amb vectors desordenats es comporta com el mergesort, però una mica millor.
+
+En el últim diari també vam comentar que els algoritmes que tenen una implementació recursiva, són els que també semblaven més homocedastics, _tot i no ser-ho_. Aixó és pel fet que quicksort i mergesort s'implementen recursivament perqué la seva implementació indica que són algoritmes de divideix i venç, en el últim diari ja vam mostrar un esquema d'un algoritme divideix i venç, només recordar que els algoritmes de divideix i venç al ser recursius ens asseguren que seran $O(n \cdot log(n))$. També vam dir que el quicksort era més senzill que el mergesort, i el mergesort no era tant senzill, però era més estable.
+
+Després ens vam centrar en estudiar la forma dels errors.
+
+
+
+
+
+## Qüestions futures
+
+_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+
+## Material addicional
+
+_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+
+## Llista de tasques
+
+_Opcional, si us va bé anar indicant les feines que cal fer i com les penseu repartir entre els membres de l’equip._
