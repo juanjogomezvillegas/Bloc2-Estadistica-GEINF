@@ -18,6 +18,25 @@ library(patchwork)
 library(lmtest)
 
 # funcions o utilitats
+confidence.intervals = function(mostra, normalitat = FALSE) {
+  # si assumim normalitat apliquem la t-student
+  if (normalitat) {
+    sort(mean(mostra) + qt(.025,length(mostra)-1) * c(-1,1) * sd(mostra) / sqrt(length(mostra)))
+  } else {
+    # si no fem servir el mètode de bootstrap
+    res = replicate(length(mostra), mean(sample(mostra,length(mostra), replace = TRUE)))
+    quantile(res, c(.025,.975))
+  }
+}
+histograma = function(m) {
+  aux = mutate(simulacions, residus = residuals(m))
+  ggplot(data = aux) +
+    geom_histogram(aes(x = residus, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(aux$residus), sd(aux$residus))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(aux$residus), max = max(aux$residus)))
+}
 ```
 
 ## Qüestions abordades
@@ -30,7 +49,7 @@ _Escriviu les qüestions que heu decidit abordar._
 
 _Qualsevol cosa que vulgueu afegir sobre les qüestions._
 
-- Al diari anterior, vam veure que les nostres dades semblen més homocedastiques aplicant una transformació logarítmica, i també vam veure que les nostres dades intenten ajustar-se a una skew normal amb $\alpha \pm 4$ sense molt d'èxit.
+- Al diari anterior, vam veure que les nostres dades semblen més homoscedastiques aplicant una transformació logarítmica, i també vam veure que les nostres dades intenten ajustar-se a una skew normal amb $\alpha \pm 4$ sense molt d'èxit.
 
 ## Variables relacionades
 
@@ -42,9 +61,7 @@ _Quines variables del vostre conjunt de dades, o d'altres, us sembla que caldrà
 
 ## Resultats
 
-_Resums i gràfics obtinguts._
-
-Primer, recordem la transformació logarítmica, i que graciès a això no podem assumir homocedasticitat, però almenys estem més a prop de poder assumir-la.
+Primer, recordem la transformació logarítmica, i que gràcies a això no podem assumir homoscedasticitat, però almenys estem més a prop de poder assumir-la.
 
 ```{r}
 simulacions.res = mutate(simulacions, 
@@ -57,33 +74,43 @@ simulacions.res = mutate(simulacions,
 I tornem a ajustar els models ajustats en diaris anteriors.
 
 ```{r}
+# models per explicar el temps de cada algoritme amb la mida del vector (vectors desordenats)
 mods = list(
-  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions),  
-  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions), 
-  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions)
+  lm.bubblesort = lm(bubblesort~mida+I(mida^2), data = simulacions.res),  
+  lm.quicksort = lm(quicksort~mida+I(mida*log(mida)), data = simulacions.res), 
+  lm.mergesort = lm(mergesort~mida+I(mida*log(mida)), data = simulacions.res)
 )
+# el mateix, però amb vectors ordenats
 mods.ord = list(
   lm.bubblesort = lm(ord.bubblesort~mida+I(mida^2), data = simulacions),  
   lm.quicksort = lm(ord.quicksort~mida+I(mida^2), data = simulacions), 
   lm.mergesort = lm(ord.mergesort~mida+I(mida*log(mida)), data = simulacions)
 )
+# el mateix, però explicant el logaritme dels temps de cada algoritme
+mods.log = list(
+  lm.bubblesort = lm(l_bubblesort~l_mida+I(l_mida^2), data = simulacions.res),  
+  lm.quicksort = lm(l_quicksort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res), 
+  lm.mergesort = lm(l_mergesort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res)
+)
 ```
 
-A continuació podem fer alguna descriptiva de les dades. Començant per la mida, comparant-la amb log(mida).
+### Descriptiva de les dades
+
+A continuació recordem que vam fer una descriptiva de les dades. Començant per la mida, comparant-la amb log(mida) fent servir la funció `summary()`.
 
 ```{r}
 summary(select(simulacions.res, mida, l_mida))
 ```
 
-I el mateix però amb els temps. Però en aquest, comparem els temps __amb vectors desordenats__, els temps __amb vectors ordenats__, i el log(temps).
+I el mateix però amb els temps. Però en aquest cas, comparem els temps __amb vectors desordenats__, els temps __amb vectors ordenats__, i el log(temps).
 
 ```{r}
 summary(select(simulacions.res, bubblesort, ord.bubblesort, l_bubblesort, quicksort, ord.quicksort, l_quicksort, mergesort, ord.mergesort, l_mergesort))
 ```
 
-Centrant-nos amb la mitjana _en general_.
+En diaris anteriors també ens vam Centrar en la mitjana dels temps _en general_.
 
-Amb vectors desordenats.
+__Amb vectors desordenats.__
 
 ```{r}
 summarise(simulacions.res, 
@@ -92,7 +119,7 @@ summarise(simulacions.res,
           mergesort = mean(mergesort))
 ```
 
-Amb vectors ordenats.
+__Amb vectors ordenats.__
 
 ```{r}
 summarise(filter(simulacions, mida == 50), 
@@ -101,7 +128,7 @@ summarise(filter(simulacions, mida == 50),
           mergesort = mean(ord.mergesort))
 ```
 
-D'on veiem com es comporten els temps de cada algoritme amb vectors desordenats i ordenats.
+D'on veiem com es comporten els temps de cada algoritme amb vectors desordenats i ordenats. D'aquí podem dir que mentre el quicksort i el mergesort amb vectors ordenats empitjoren el temps, el bubblesort és l'únic que millora el temps.
 
 Veient-lo gràficament, vam veure com es comporta cada algortime amb els dos tipus de vectors, _ordenats i desordenats_.
 
@@ -151,13 +178,62 @@ ggplot(data = simulacions) +
 
 ## {.end}
 
-I vam veure que bubblesort i mergesort mantenen la forma, mentre que el quicksort amb vectors ordenats es comporta semblant al bubblesort, amb vectors desordenats es comporta com el mergesort, però una mica millor.
+I vam veure que bubblesort i mergesort mantenen la forma, és a dir, bubblesort continua sent $O(n^2)$ i mergesort continua sent $O(n \cdot log(n))$, mentre que el quicksort amb vectors ordenats es comporta semblant al bubblesort ($O(n^2)$), amb vectors desordenats es comporta com el mergesort ($O(O(n \cdot log(n)))$), però una mica millor.
 
-En el últim diari també vam comentar que els algoritmes que tenen una implementació recursiva, són els que també semblaven més homocedastics, _tot i no ser-ho_. Aixó és pel fet que quicksort i mergesort s'implementen recursivament perqué la seva implementació indica que són algoritmes de divideix i venç, en el últim diari ja vam mostrar un esquema d'un algoritme divideix i venç, només recordar que els algoritmes de divideix i venç al ser recursius ens asseguren que seran $O(n \cdot log(n))$. També vam dir que el quicksort era més senzill que el mergesort, i el mergesort no era tant senzill, però era més estable.
+En l'últim diari també vam comentar que els algoritmes que tenen una implementació recursiva, són els que també semblaven més homocedastics, tot i no ser-ho. Això podia ser pel fet que quicksort i mergesort s'implementen recursivament perquè la seva implementació indica que són algoritmes de divideix i venç. També vam dir que el quicksort era més senzill que el mergesort, i el mergesort no era tant senzill, però era més estable.
 
-Després ens vam centrar en estudiar la forma dels errors.
+### Descriptiva dels residus
+
+Un cop hem descrit les dades, podem descriure els errors dels models ajustats, __només agafarem el model que ajusta el logaritme dels temps__, ja que en diaris anterior vam veure que amb el logaritme els residus semblen és homoscedastics.
+
+```{r}
+summary(residuals(mods.log$lm.bubblesort))
+summary(residuals(mods.log$lm.quicksort))
+summary(residuals(mods.log$lm.mergesort))
+```
+
+Hem descrit els residus, falta veure com varien, però això és millor visualitzar-ho amb una gràfica.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma(mods.log$lm.bubblesort)
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma(mods.log$lm.quicksort)
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma(mods.log$lm.mergesort)
+```
+
+###  {.end}
+
+A partir d'aquí vam dir que els residus semblaven seguir una __mitjana a prop del 0__.
+
+### Hipòtesi plantejada
+
+La nostra hipòtesi plantejada, era si hi havia una relació entre els errors dels models i la mida del vector, considerant només amb __vectors desordenats__.
+
+Per respondre a la nostra hipòtesi vam obtenir uns intervals de confiança, i entre aquest interval vam veure que els residus semblaven més normals, però en realitat només el bubblesort ho era. Per tal d'aconseguir un interval de confiança de la mitjana, en el que puguem dir si un algoritme segueix una certa distribució, o no. Com que la nostra mostra és bastant gran, llavors segons la teoria poder expressar la mitjana com.
+
+$$
+X \approx N(\mu, \frac{\sigma}{\sqrt{n}})
+$$
 
 
+### Assumpcions seguides
+
+
+
+### Conclusió extreta
 
 
 
