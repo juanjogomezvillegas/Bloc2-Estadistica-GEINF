@@ -37,6 +37,35 @@ histograma = function(m) {
     geom_function(aes(col = 'Uniforme'), linewidth = 1, 
                   fun = function(x) dunif(x, min = min(aux$residus), max = max(aux$residus)))
 }
+histograma2 = function(X) {
+  ggplot() +
+    geom_histogram(aes(x = X, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(X), sd(X))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(X), max = max(X)))
+}
+histograma3 = function(residus) {
+  ggplot() +
+    geom_histogram(aes(x = residus, y = after_stat(density))) +  
+    geom_function(aes(col = 'Skew Normal(alpha = -4)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), -4)) + 
+    geom_function(aes(col = 'Skew Normal(alpha = 0)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), 0)) +
+    geom_function(aes(col = 'Skew Normal(alpha = 4)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), 4))
+}
+calcul.arrel = function(x) {
+  sqrt(abs(x))
+}
+veure.tendencia = function(x) {
+  suavitza = with(simulacions.res, lowess(mida, calcul.arrel(x)))
+  ggplot(data = simulacions.res) +
+    geom_point(aes(x = mida, y = calcul.arrel(x)), alpha = 0.05) +
+    geom_line(data = as_tibble(suavitza), aes(x=x,y=y), col = 'blue') + 
+    scale_x_continuous(trans = "log10") + 
+    scale_y_continuous(trans = "log10")
+}
 ```
 
 ## Qüestions abordades
@@ -108,7 +137,7 @@ I el mateix però amb els temps. Però en aquest cas, comparem els temps __amb v
 summary(select(simulacions.res, bubblesort, ord.bubblesort, l_bubblesort, quicksort, ord.quicksort, l_quicksort, mergesort, ord.mergesort, l_mergesort))
 ```
 
-En diaris anteriors també ens vam Centrar en la mitjana dels temps _en general_.
+En diaris anteriors també ens vam Centrar en la mitjana dels temps de la mostra _en general_, és a dir, sense aplicar cap transformació sobre els temps.
 
 __Amb vectors desordenats.__
 
@@ -128,9 +157,9 @@ summarise(filter(simulacions, mida == 50),
           mergesort = mean(ord.mergesort))
 ```
 
-D'on veiem com es comporten els temps de cada algoritme amb vectors desordenats i ordenats. D'aquí podem dir que mentre el quicksort i el mergesort amb vectors ordenats empitjoren el temps, el bubblesort és l'únic que millora el temps.
+D'on veiem com es comporten els temps de cada algoritme amb vectors desordenats i ordenats. D'aquí podem dir que mentre el quicksort i el mergesort amb vectors ordenats empitjoren el temps, el bubblesort és l'únic que millora el temps. Això encaixa en el fet que la implementació de quicksort i mergesort __és recursiva__ amb vectors ordenats es comporten pitjor, mentre que bubblesort que __és un bucle que va fent intercanvis__, amb vectors ordenats es comporta millor, pel fet que entrarà menys cops al condicional i farà menys intercanvis.
 
-Veient-lo gràficament, vam veure com es comporta cada algortime amb els dos tipus de vectors, _ordenats i desordenats_.
+Veient-lo gràficament, vam veure com es comporta cada algoritme amb els dos tipus de vectors, ordenats i desordenats, a més de la forma que tenen els temps en relació amb la mida.
 
 ## {.tabset}
 
@@ -178,9 +207,9 @@ ggplot(data = simulacions) +
 
 ## {.end}
 
-I vam veure que bubblesort i mergesort mantenen la forma, és a dir, bubblesort continua sent $O(n^2)$ i mergesort continua sent $O(n \cdot log(n))$, mentre que el quicksort amb vectors ordenats es comporta semblant al bubblesort ($O(n^2)$), amb vectors desordenats es comporta com el mergesort ($O(O(n \cdot log(n)))$), però una mica millor.
+I vam veure que bubblesort i mergesort mantenen la forma, és a dir, bubblesort continua sent $O(n^2)$ i mergesort continua sent $O(n \cdot log(n))$, mentre que el quicksort amb vectors ordenats es comporta semblant al bubblesort ($O(n^2)$), amb vectors desordenats es comporta com el mergesort ($O(O(n \cdot log(n)))$), però una mica millor. Aixó té relació amb l'explicat a altres assignatures de programació: $MTP_{1 \lor 2} \lor EDA$.
 
-En l'últim diari també vam comentar que els algoritmes que tenen una implementació recursiva, són els que també semblaven més homocedastics, tot i no ser-ho. Això podia ser pel fet que quicksort i mergesort s'implementen recursivament perquè la seva implementació indica que són algoritmes de divideix i venç. També vam dir que el quicksort era més senzill que el mergesort, i el mergesort no era tant senzill, però era més estable.
+En l'últim diari també vam comentar que els algoritmes que tenen una implementació recursiva, són els que també semblaven més homocedastics, __tot i no ser-ho__, i això deiem que podia ser pel fet que quicksort i mergesort s'implementen recursivament perquè la seva implementació indica que són algoritmes de divideix i venç. També vam dir que el quicksort era més senzill que el mergesort, i el mergesort no era tan senzill, però era més estable.
 
 ### Descriptiva dels residus
 
@@ -196,19 +225,19 @@ Hem descrit els residus, falta veure com varien, però això és millor visualit
 
 ###  {.tabset}
 
-#### BubbleSort *desordenat*
+#### BubbleSort
 
 ```{r}
 histograma(mods.log$lm.bubblesort)
 ```
 
-#### QuickSort *desordenat*
+#### QuickSort
 
 ```{r}
 histograma(mods.log$lm.quicksort)
 ```
 
-#### MergeSort *desordenat*
+#### MergeSort
 
 ```{r}
 histograma(mods.log$lm.mergesort)
@@ -216,34 +245,228 @@ histograma(mods.log$lm.mergesort)
 
 ###  {.end}
 
-A partir d'aquí vam dir que els residus semblaven seguir una __mitjana a prop del 0__.
+A partir d'aquí ens vam centrar en estudiar la forma que tenen els errors, i vam dir que els residus semblaven seguir una normal amb __mitjana a prop del 0__.
 
 ### Hipòtesi plantejada
 
-La nostra hipòtesi plantejada, era si hi havia una relació entre els errors dels models i la mida del vector, considerant només amb __vectors desordenats__.
+La nostra hipòtesi plantejada, era si hi havia una relació entre els errors dels models i la mida del vector, i quina era la forma d'aquests errors, considerant només amb __vectors desordenats__.
 
-Per respondre a la nostra hipòtesi vam obtenir uns intervals de confiança, i entre aquest interval vam veure que els residus semblaven més normals, però en realitat només el bubblesort ho era. Per tal d'aconseguir un interval de confiança de la mitjana, en el que puguem dir si un algoritme segueix una certa distribució, o no. Com que la nostra mostra és bastant gran, llavors segons la teoria poder expressar la mitjana com.
+Per respondre a la nostra hipòtesi vam obtenir uns intervals de confiança, i entre aquest interval vam veure que els residus semblaven més normals, però en realitat només el bubblesort ho era. Per tal d'aconseguir un interval de confiança de la mitjana, en el que puguem dir si un algoritme segueix una certa distribució, o no. Com que la nostra mostra és bastant gran, llavors segons el teorema del límit central podem expressar la mitjana com.
 
 $$
-X \approx N(\mu, \frac{\sigma}{\sqrt{n}})
+\overline{X} \approx N(\mu, \frac{\sigma}{\sqrt{n}})
 $$
 
+Així que vam construir intervals de confiança amb els temps _amb vectors ordenats_ com.
+
+```{r}
+aux = data.frame(
+  bubblesort = tibble(
+    mu = mean(residuals(mods$lm.bubblesort)), 
+    sigma = sd(residuals(mods$lm.bubblesort)), 
+    sqrt.n = sqrt(length(residuals(mods$lm.bubblesort)))), 
+  quicksort = tibble(
+    mu = mean(residuals(mods$lm.quicksort)), 
+    sigma = sd(residuals(mods$lm.quicksort)), 
+    sqrt.n = sqrt(length(residuals(mods$lm.quicksort)))), 
+  mergesort = tibble(
+    mu = mean(residuals(mods$lm.mergesort)), 
+    sigma = sd(residuals(mods$lm.mergesort)), 
+    sqrt.n = sqrt(length(residuals(mods$lm.mergesort))))
+)
+
+tibble(
+  bubblesort = c(qnorm(.025, mean = aux$bubblesort.mu, sd = aux$bubblesort.sigma/aux$bubblesort.sqrt.n), qnorm(.975, mean = aux$bubblesort.mu, sd = aux$bubblesort.sigma/aux$bubblesort.sqrt.n)),
+  quicksort = c(qnorm(.025, mean = aux$quicksort.mu, sd = aux$quicksort.sigma/aux$quicksort.sqrt.n), qnorm(.975, mean = aux$quicksort.mu, sd = aux$quicksort.sigma/aux$quicksort.sqrt.n)), 
+  mergesort = c(qnorm(.025, mean = aux$mergesort.mu, sd = aux$mergesort.sigma/aux$mergesort.sqrt.n), qnorm(.975, mean = aux$mergesort.mu, sd = aux$mergesort.sigma/aux$mergesort.sqrt.n))
+)
+```
+
+Però vam preferir fer sevir el mètode de bootstrap o la $t$-student, com que no podem assumir normalitat, vam haver de fer servir el mètode no paramètric de bootstrap, i vam construir intervals de confiança amb els temps _amb vectors ordenats_ com.
+
+```{r}
+int = tibble(
+  bubblesort = confidence.intervals(residuals(mods$lm.bubblesort)), 
+  quicksort = confidence.intervals(residuals(mods$lm.quicksort)), 
+  mergesort = confidence.intervals(residuals(mods$lm.mergesort))
+)
+int
+```
+
+I podem tornar a visualitzar l'histograma com.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.bubblesort)[between(residuals(mods$lm.bubblesort), int$bubblesort[1], int$bubblesort[2])])
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.quicksort)[between(residuals(mods$lm.quicksort), int$quicksort[1], int$quicksort[2])])
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma2(residuals(mods$lm.mergesort)[between(residuals(mods$lm.mergesort), int$mergesort[1], int$mergesort[2])])
+```
+
+###  {.end}
+
+I veiem que els algoritmes que són $n \cdot log(n)$, no segueixen tant la normal com el bubblesort que és $n^2$, això és perquè en realitat els residus de bubblesort si que segueixen una normal, mentre els del quicksort i el mergesort segueixen més el logaritme que una normal.
+
+Si construïm un interval de confiança fent servir els errors del model que ajusta el logaritme dels temps, és a dir `mods.log`, tots els algoritmes seguirien el logaritme.
+
+Això que hem dit de paraula també ho vam contrastar amb el `shapiro.test()` com.
+
+```{r}
+int = tibble(
+  bubblesort = confidence.intervals(simulacions.res$bubblesort), 
+  quicksort = confidence.intervals(simulacions.res$quicksort), 
+  mergesort = confidence.intervals(simulacions.res$mergesort)
+)
+mostres = list(
+  bubblesort = simulacions.res$bubblesort[between(simulacions.res$bubblesort, int$bubblesort[1], int$bubblesort[2])], 
+  quicksort = simulacions.res$quicksort[between(simulacions.res$quicksort, int$quicksort[1], int$quicksort[2])], 
+  mergesort = simulacions.res$mergesort[between(simulacions.res$mergesort, int$mergesort[1], int$mergesort[2])]
+)
+```
+
+```{r}
+shapiro.test(mostres$bubblesort)
+shapiro.test(mostres$quicksort)
+shapiro.test(mostres$mergesort)
+```
+
+I veiem que l'únic que segueix una normal és el bubblesort. Per això vam dir que els intervals de confiança no ens aportaven res de nou, i vam decidir no fer-los servir, i a l'últim diari és quan vam treballar amb el logaritme dels temps, per veure si segueixen una normal, és a dir, si donem resposta al següent contrast:
+
+$$
+H0: \text{Els residus són normals} \\
+H1: \text{Els residus no són normals}
+$$
+
+```{r}
+shapiro.test(residuals(mods.log$lm.bubblesort))
+shapiro.test(residuals(mods.log$lm.quicksort))
+shapiro.test(residuals(mods.log$lm.mergesort))
+```
+
+D'on veiem que amb un $valor-p < 0.05$, tenim evidències per anar en contra de la hipòtesis de normalitat dels residus, i podem dir que els residus no són normals.
+
+Volem comprovar ara el següent contrast. Fent servir el `bptest()`, i aquest test li hem de passar el model ajustat en comptes dels residus.
+
+$$
+H0: \text{Els residus són homoscedastics} \\
+H1: \text{Els residus no són homoscedastics}
+$$
+
+```{r}
+bptest(mods.log$lm.bubblesort)
+bptest(mods.log$lm.quicksort)
+bptest(mods.log$lm.mergesort)
+```
+
+D'on veiem que amb un $valor-p < 0.05$, tenim evidències per creure que els residus no són homoscedastics, sinó que serien heteroscedastics, és a dir, que segueixen una tendència. Si visualitzem els errors.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+veure.tendencia(residuals(mods.log$lm.bubblesort))
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+veure.tendencia(residuals(mods.log$lm.quicksort))
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+veure.tendencia(residuals(mods.log$lm.mergesort))
+```
+
+###  {.end}
+
+Podem veure que tot i no ser homoscedastics, aplicant una transformació logarítmica estan més a prop de ser-ho.
+
+Finalment, vam comprovar si els residus seguien una skew normal.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r}
+histograma3(residuals(mods.log$lm.bubblesort))
+```
+
+#### QuickSort *desordenat*
+
+```{r}
+histograma3(residuals(mods.log$lm.quicksort))
+```
+
+#### MergeSort *desordenat*
+
+```{r}
+histograma3(residuals(mods.log$lm.mergesort))
+```
+
+###  {.end}
+
+I aquí vam arribar a la conclusió de que els residus dels diferents models segueixen una skew normal amb $\alpha \pm 4$.
 
 ### Assumpcions seguides
 
+Per poder construir l'interval de confiança en el que sabem que els errors intentaven seguir una normal, hem seguit l'assumpció de què, sabent ja que els residus no són normals, vam dir, pel teoriema del límit central almenys la nostra mostra és bastant gran.
 
+```{r}
+dim(simulacions.res)
+```
+
+Com que la nostra mostra és bastant gran segons el teorema, podem assumir que la mitjana de la mostra segueix una normal com, $N(\mu, \frac{\sigma}{\sqrt{n}})$.
+
+Altres assumpcions, hem vist que no podem assumir una normal, i tot i que veient els gràfics ens pugui semblar que els residus són homoscedastics, tampoc tenim evidències per assumir l'homoscedasticitat dels residus.
 
 ### Conclusió extreta
 
+Finalment, la conclusió final és que els residus dels temps dels diferents algoritmes estudiats segueixen la forma que han de seguir segons la teoria, p.e. bubblesort és $O(n^2)$ és el que aplicant la transformació logarítmica sembla seguir més una normal, mentre que el quicksort i el mergesort amb $O(n \cdot log(n))$ segueix més el logaritme que una normal. I quan diem que el bubblesort segueix una normal, en realitat volem dir que segueix una normal amb un biaix cap al 0, _cap a l'esquerra_.
 
+També és interessant que treballant amb el logaritme dels temps el test d'homoscedasticitat ens porta a rebutjar la hipòtesi nul·la, però veient els gràfics, veiem que els residus no semblen seguir cap tendència.
 
 ## Qüestions futures
 
-_Dubtes, preguntes i qüestions que han sorgit durant l’estudi._
+Com a qüestions futures, podríem relacionar aquest estudi dels algoritmes d'ordenació amb altres assignatures, com p.e.
+
+- A __bases de dades__, vam veure que en el moment en què en un SGBD (Sistema Gestor de Bases de Dades) fem una consulta SQL, el SGBD fa una sèrie de passos: __Primer converteix la consulta amb sintaxi SQL a operacions d'Àlgebra relacional__, després __a partir d'un arbre inicial de consulta optimitza la consulta__, el __tercer pas__ amb la consulta ja optimitzada és el que ens interessa, ja que en aquest pas el SGBD __mitjançant estàdistiques intenta escollir un algoritme per cada operació__, en el càs de __l'operació d'ordenació__, _order by_, el __SGBD escolliria el quicksort o el mergesort__, però __en cap cas escolliria el bubblesort__, només ho escolliria en el cas en què la taula sobre la qual es fa la consulta tingui pocs registres, però __gairebé sempre acabarà escollint el quicksort__, i __algun cop escolliria el mergesort__. La qüestió és, __quines estadístiques pot mirar el SGBD per tal d'escollir el millor algoritme per ordenar una taula__ amb pocs i molts registres? Quan és millor escollir un algoritme recursiu com quicksort i mergesort, o quan és millor escollir un algoritme més senzill com bubblesort?
+
+- A __fonaments de la computació__, acabem de veure que hi ha problemes __decidibles__ (que existeix un algoritme/màquina de Turing que els resol) i __indecidibles__ (que encara no s'ha trobat cap algoritme/màquina de Turing que els resolgui), els __algoritmes d'ordenació__ clarament __serien dels decidibles__, però a dins d'aquest grup, està clar que formarien part de la classe de problemes que es poden resoldre en temps polinòmic (classe P). Entre els decidibles també vam veure que hi ha una classe NP (No polinòmic), on hi ha els problemes que no es poden resoldre en temps polinòmic, però sí que es pot validar si una solució és correcte en _temps polinòmic_, i també vam veure que $P \in NP$, i tot i que no s'ha demostrat encara, molts creuen que $P \neq NP$. La qüestió és, podem resoldre el problema de l'ordenació d'un vector convertint aquest problema a un problema NP-complet, com el SAT o el de la k-colorabilitat d'un graf? D'aquesta manera podríem ordenar un vector, reduïnt el problema a p.e. la k-colorabilitat d'un graf, d'aquesta manera si aconseguim pintar cada vèrtex d'un graf sense que hi hagui adjacents amb el mateix color haurem ordenat el vector. L'algoritme seria $O(2^n)$, _o pitjor, $O(n!)$_, i a partir d'aquí, podríem comparar la forma dels errors d'un algoritme d'ordenació que sigui $O(2^n)$ amb els algoritmes d'ordenació que hem estudiat?
+
+- Tot i que potser seria més fàcil recordar l'assignatura de __Estructures de Dades i Algorítmica__, i fer servir un algoritme de backtracking per resoldre el problema de l'ordenació d'un vector, d'aquesta manera tindrem un algoritme $O(2^n)$ per comparar-ho amb els algoritmes d'ordenació de $O(n^2)$ o $O(n \cdot log(n))$ que acabem d'estudiar, i per comparar també la forma dels errors.
+
+Una altre qüestió que ens podríem plantejar, és si el llenguatge escollit per implementar els algoritmes afecta molt o poc a la forma dels errors, nosaltres l'hem provat amb c++, però també ho podríem haver provat amb c, java, R, etc ... Per fer això només hauríem de modificar el conjunt de dades `algoritmes` com.
+
+```{r}
+algoritmes2 = mutate(algoritmes, 
+                     llenguatge = "c++")
+algoritmes2
+```
+
+També podríem executar cada algoritme amb un llenguatge d'alt nivell com c++ o java, i amb un llenguatge que estigui a més baix nivell, és a dir, fent servir el llenguatge c mitjançant crides al sistema, i veure si aixó té efecte en la forma dels errors i en la velocitat dels algoritmes.
 
 ## Material addicional
 
-_Opcional, si heu consultat alguna web o font. Indiqueu els enllaços._
+- Apunts d'Estadística.
+
+- Apunts de Bases de dades.
+
+- Apunts de Fonaments de la Computació.
 
 ## Llista de tasques
 
