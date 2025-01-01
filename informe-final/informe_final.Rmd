@@ -1,0 +1,358 @@
+---
+title: "Informe Final"
+author: "JHJ"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=TRUE)
+load("simulacions.RData")
+library(sn) # skew normal
+library(tidyverse)
+library(gtsummary)
+library(ggplot2)
+library(patchwork)
+library(lmtest)
+
+simulacions.res = mutate(simulacions, 
+                         l_mida = log(mida), 
+                         l_bubblesort = log(bubblesort), 
+                         l_quicksort = log(quicksort), 
+                         l_mergesort = log(mergesort))
+
+confidence.intervals = function(mostra, normalitat = FALSE, t.student = FALSE) {
+  # si assumim normalitat apliquem la t-student
+  if (normalitat) {
+    if (t.student) {
+      sort(mean(mostra) + qt(.025,length(mostra)-1) * c(-1,1) * sd(mostra) / sqrt(length(mostra)))
+    } else {
+      c(qnorm(.025, mean = mean(mostra), sd = sd(mostra)/(sqrt(length(mostra)))), 
+        qnorm(.975, mean = mean(mostra), sd = sd(mostra)/(sqrt(length(mostra)))))
+    }
+  } else {
+    # si no fem servir el mètode de bootstrap
+    res = replicate(length(mostra), mean(sample(mostra,length(mostra), replace = TRUE)))
+    quantile(res, c(.025,.975))
+  }
+}
+histograma = function(m) {
+  aux = mutate(simulacions, residus = residuals(m))
+  ggplot(data = aux) +
+    geom_histogram(aes(x = residus, y = after_stat(density))) + 
+    geom_function(aes(col = 'Normal'), linewidth = 1, 
+                  fun = function(x) dnorm(x, mean(aux$residus), sd(aux$residus))) + 
+    geom_function(aes(col = 'Uniforme'), linewidth = 1, 
+                  fun = function(x) dunif(x, min = min(aux$residus), max = max(aux$residus)))
+}
+histograma2 = function(residus) {
+  ggplot() +
+    geom_histogram(aes(x = residus, y = after_stat(density))) +  
+    geom_function(aes(col = 'Skew Normal(alpha = -4)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), -4)) + 
+    geom_function(aes(col = 'Skew Normal(alpha = 0)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), 0)) +
+    geom_function(aes(col = 'Skew Normal(alpha = 4)'), linewidth = 1, 
+                  fun = function(x) dsn(x, xi = mean(residus), omega = sd(residus), 4))
+}
+calcul.arrel = function(x) {
+  sqrt(abs(x))
+}
+veure.tendencia = function(x) {
+  suavitza = with(simulacions.res, lowess(mida, calcul.arrel(x)))
+  ggplot(data = simulacions.res) +
+    geom_point(aes(x = mida, y = calcul.arrel(x)), alpha = 0.05) +
+    geom_line(data = as_tibble(suavitza), aes(x=x,y=y), col = 'blue') + 
+    scale_x_continuous(trans = "log10") + 
+    scale_y_continuous(trans = "log10")
+}
+```
+
+# Introducció
+
+Breu introducció del treball: contextualitzeu les dades analitzades i l'objectiu principal del vostre estudi. *(Opcional, màxim 100 paraules).*
+
+# Descriptiva de les dades
+
+## Resum estadístic
+
+El nostre conjunt de dades es compon de dues taules, una conté informació de cadascun dels algoritmes que hem estudiat, (`algoritmes`).
+
+```{r, echo=FALSE}
+algoritmes
+```
+
+I una altra que conté informació del temps que ha trigat cada simulació amb cada algoritme, amb vectors de mides diferents, (`simulacions`), i podem descriure cada temps d'execució fent ser `summary()`.
+
+```{r, echo=FALSE}
+summary(select(simulacions.res, mida, l_mida, bubblesort, quicksort, mergesort, ord.bubblesort, ord.quicksort, ord.mergesort, l_bubblesort, l_quicksort, l_mergesort))
+```
+
+D'aquí podem veure que el **quicksort** és l'únic algoritme que **empitjora amb vectors ordenats el temps d'execució (en mitjana)**, mentre que **bubblesort** i **mergesort**, **milloren el temps d'execució amb vectors ordenats**.
+
+També vam veure que **les nostres dades no podien seguir una normal**, i així ens vam preguntar **quina forma segueixen els temps d'execució de cada algoritme amb vectors ordenats i desordenats**? I aquesta pregunta la vam respondre **visualitzant els temps amb vectors ordenats i desordenats**.
+
+## Visualització de dades
+
+### Temps d'execució amb vectors ordenats i desordenats
+
+Veient-lo gràficament podem veure com es comporta cada algoritme amb els dos tipus de vectors, *ordenats i desordenats*, a més de la forma que tenen els temps en relació amb la mida.
+
+#### {.tabset}
+
+##### BubbleSort _desordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = bubblesort))
+```
+
+##### QuickSort _desordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = quicksort))
+```
+
+##### MergeSort _desordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = mergesort))
+```
+
+##### BubbleSort _ordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.bubblesort))
+```
+
+##### QuickSort _ordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.quicksort))
+```
+
+##### MergeSort _ordenat_
+
+```{r, echo=FALSE}
+ggplot(data = simulacions) +
+  geom_point(aes(y = mida, x = ord.mergesort))
+```
+
+#### {.end}
+
+I d'aquí podem veure que **bubblesort** i **mergesort** mantenen la forma amb els dos tipus de vectors, mentre **quicksort** amb **vectors desordenats es comporta com el mergesort**, i amb **vectors ordenats es comporta com el bubblesort**. I podem veure que això té relació amb l'explicat a altres assignatures de programació com $MTP_{1 \lor 2} \lor EDA$.
+
+**Relacionat amb l'estudi dels errors**, podem veure que **els algoritmes que tenen una implementació recursiva són els que també semblaven més homocedastics**, *tot i no ser-ho*. Però això sorgeix amb el plantejament de l'hipòtesi.
+
+# Hipòtesi plantejada
+
+Per fer aquesta part vam ajustar els següents models, i per això ens hem centrat en **la forma dels errors** dels models que ajustats. Els models que hem ajustat treballen amb el **logaritme dels temps d'execució**.
+
+```{r, echo=FALSE}
+mods.log = list(
+  lm.bubblesort = lm(l_bubblesort~l_mida+I(l_mida^2), data = simulacions.res),  
+  lm.quicksort = lm(l_quicksort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res), 
+  lm.mergesort = lm(l_mergesort~l_mida+I(l_mida*log(l_mida)), data = simulacions.res)
+)
+mods.log
+```
+
+I podem veure la forma dels residus visualitzant-los amb l'histograma.
+
+###  {.tabset}
+
+#### BubbleSort
+
+```{r, echo=FALSE, warning=FALSE}
+histograma(mods.log$lm.bubblesort)
+```
+
+#### QuickSort
+
+```{r, echo=FALSE, warning=FALSE}
+histograma(mods.log$lm.quicksort)
+```
+
+#### MergeSort
+
+```{r, echo=FALSE, warning=FALSE}
+histograma(mods.log$lm.mergesort)
+```
+
+###  {.end}
+
+La nostra **hipòtesi** plantejada és si hi ha una relació entre els errors dels models i la mida del vector, i quina és la forma d'aquests errors, **treballant amb el logaritme dels temps**.
+
+**A continuació per tenir ordenats els contrastos**, podem assigna un codi a les diferents hipòtesis.
+
+`[contrast de normalitat]`. Per **respondre a la nostra hipòtesi**, podem platejar les següents hipòtesi sobre els errors dels models.
+
+$$
+H0: \text{Els residus són normals}\\
+H1: \text{Els residus no són normals}
+$$
+
+Per contrastar la normalitat dels residus.
+
+`[contrast d'homocedasticitat]`. I també podem plantejar el següent per contrastar l'homocedasticitat dels residus.
+
+$$
+H0: \text{Els residus són homocedastics}\\
+H1: \text{Els residus no són homocedastics}
+$$
+
+Per **respondre a la nostra hipòtesi també podem obtenir intervals de confiança**, i entre aquest interval, podem veure si **els residus són més normals**, o no, o si segueixen una certa forma.
+
+**Utilitats:**
+
+Per tal construir intervals de confiança amb R, hem programat la següent funció (`confidence.intervals`), que a partir d'una mostra, si no és pot assumir normalitat fa servir el **mètode de bootstrap**, altrament, si pot fer servir la **$t$-student**, la fa servir, altrament, fa servir el **teorema del límit central**. D'aquesta forma el procés de construir intervals queda automatitzat.
+
+```{r, echo=FALSE}
+confidence.intervals
+```
+
+> També tenim una funció per mostrar l'histograma, i altres funcions d'R que ens permeten automatitzar més tasques repetitives.
+
+# Assumpcions seguides
+
+Assumpcions del `[contrast de normalitat]`.
+
+Les assumpcions seguides durant l'estudi han estat per poder **construir l'interval de confiança en el que sabem que els errors intentaven seguir una normal**, hem seguit l'assumpció de què, **sabent ja que els residus no són normals**, vam dir, **pel teorema del límit central almenys la nostra mostra és bastant gran**.
+
+```{r, echo=FALSE}
+dim(simulacions.res)
+```
+
+Com que **la nostra mostra és bastant gran segons el teorema**, podem assumir que **la mitjana de la mostra segueix una normal** com.
+
+$$
+\overline{X} = N(\mu_x, \frac{\sigma_x}{\sqrt{n}})
+$$
+
+Assumpcions del `[contrast d'homocedasticitat]`.
+
+Altres assumpcions, hem vist que **no podem assumir una normal**, i tot i que **veient els gràfics ens pugui semblar que els residus són homoscedastics**, **tampoc tenim evidències per assumir l'homoscedasticitat dels residus**.
+
+# Resultats i conclusió
+
+Per donar resposta al contrast `[contrast de normalitat]`, podem fer servir la funció `shapiro.test()`.
+
+```{r, echo=FALSE}
+shapiro.test(residuals(mods.log$lm.bubblesort))
+shapiro.test(residuals(mods.log$lm.quicksort))
+shapiro.test(residuals(mods.log$lm.mergesort))
+```
+
+Amb un nivell de significació de $\alpha = 0.05$, podem veure que el $valor-p < \alpha$, per tant, **tenim evidències per rebutjar la normalitat dels residus**.
+
+Per donar resposta al contrast `[contrast d'homocedasticitat]`, podem fer servir la funció `bptest()`, en aquest test no li passem els residus, sinó que li hem de passar els models directament.
+
+```{r, echo=FALSE}
+bptest(mods.log$lm.bubblesort)
+bptest(mods.log$lm.quicksort)
+bptest(mods.log$lm.mergesort)
+```
+
+Amb un nivell de significació de $\alpha = 0.05$, podem veure que el $valor-p < \alpha$, per tant, **tenim evidències per rebutjar l'homocedasticitat dels residus**. En conclusió, **els residus són heterocedastics**, és a dir, que segueixen una tendència.
+
+Com que no els resultats dels contrastos de `[contrast de normalitat]` i `[contrast d'homocedasticitat]` ens ha portat a rebutjar la hipòtesi nul·la, podem provar de construir intervals de confiança per veure si podem assumir algun contrast.
+
+Aquests intervals els podem construir fent servir la funció `confidence.intervals()`, i com que no podem assumir normalitat dels residus, haurem de fer servir el mètode de bootstrap, és a dir, executar la funció `confidence.intervals(residus)`, canviant els residus pels residus dels models.
+
+```{r, echo=FALSE}
+int = tibble(
+  bubblesort = confidence.intervals(residuals(mods.log$lm.bubblesort)), 
+  quicksort = confidence.intervals(residuals(mods.log$lm.quicksort)), 
+  mergesort = confidence.intervals(residuals(mods.log$lm.mergesort))
+)
+int
+```
+
+I tornem a contrastar `[contrast de normalitat]` i `[contrast d'homocedasticitat]` amb les funcions `shapiro.test()` i `bptest()` respectivament.
+
+```{r, echo=FALSE}
+shapiro.test(residuals(mods.log$lm.bubblesort)[between(residuals(mods.log$lm.bubblesort), int$bubblesort[1], int$bubblesort[2])])
+shapiro.test(residuals(mods.log$lm.quicksort)[between(residuals(mods.log$lm.quicksort), int$quicksort[1], int$quicksort[2])])
+shapiro.test(residuals(mods.log$lm.mergesort)[between(residuals(mods.log$lm.mergesort), int$mergesort[1], int$mergesort[2])])
+```
+
+Treballant amb el mateix nivell de significació ($\alpha = 0.05$). El $valor-p < \alpha$, per tant, continuem sense poder assumir normalitat dels residus.
+
+I no podem respondre el `[contrast d'homocedasticitat]`, ja que a la funció `bptest()` li pasem els models ajustats, de totes maneres si no podem homocedasticitat, els intervals de confiança no ens aporten res de nou.
+
+Si visualitzem els errors veiem que tot i no ser homocedastics, ho semblen bastant.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r, echo=FALSE}
+veure.tendencia(residuals(mods.log$lm.bubblesort))
+```
+
+#### QuickSort *desordenat*
+
+```{r, echo=FALSE}
+veure.tendencia(residuals(mods.log$lm.quicksort))
+```
+
+#### MergeSort *desordenat*
+
+```{r, echo=FALSE}
+veure.tendencia(residuals(mods.log$lm.mergesort))
+```
+
+###  {.end}
+
+Aplicant una transformació logarítmica els residus estan més a prop de ser homocedastics, tot i que el test d'homocedasticitat ens dona un $valor-p < \alpha$. Potser en aquest test devem estar veient un **error tipus 1**, rebutjar $H_0$ quan és certa, en tot cas hauríem de calcular la $P(\text{rebutjar }H_0 | H_0\text{ és certa})$.
+
+Finalment, observant els gràfics veiem que segueixen o no una tendència, vam pensar que els errors es podien ajustar a un `skew normal`.
+
+###  {.tabset}
+
+#### BubbleSort *desordenat*
+
+```{r, echo=FALSE, warning=FALSE}
+histograma2(residuals(mods.log$lm.bubblesort))
+```
+
+#### QuickSort *desordenat*
+
+```{r, echo=FALSE, warning=FALSE}
+histograma2(residuals(mods.log$lm.quicksort))
+```
+
+#### MergeSort *desordenat*
+
+```{r, echo=FALSE, warning=FALSE}
+histograma2(residuals(mods.log$lm.mergesort))
+```
+
+###  {.end}
+
+I aquí vam arribar a la conclusió de que **els residus dels diferents models segueixen una skew normal amb $\alpha \pm 4$**.
+
+## Anàlisi de resultats
+
+```{r, echo=FALSE}
+# Incloeu aquí el codi per realitzar l'anàlisi que valida la hipòtesi
+```
+
+## Conclusió
+
+> Finalment, la conclusió final és que els residus dels temps dels diferents algoritmes estudiats segueixen la forma que han de seguir segons la teoria, p.e. bubblesort és $O(n^2)$ és el que aplicant la transformació logarítmica sembla seguir més una normal, mentre que el quicksort i el mergesort amb la forma $O(n \cdot log(n))$ segueixen més el logaritme que una normal. I quan diem que el bubblesort segueix una normal, en realitat volem dir que segueix una normal amb un biaix cap al 0, _cap a l'esquerra_, o una skew normal amb $\alpha \pm 4$.
+>
+> També és interessant que treballant amb el logaritme dels temps el test d'homoscedasticitat ens porta a rebutjar la hipòtesi nul·la, però veient els gràfics, veiem que els residus no semblen seguir cap tendència.
+
+# Referències
+
+- `[DiarisEstadistica]`. Grup JHJ. (2024). *Diaris d'estadistica*. Estadistica, GEINF, UdG.
+
+- `[apuntsEstadistica]` Professors d'estadistica. (2024). *Apunts del moodle*. Estadistica, GEINF, UdG.
+
+- `[apuntsEDA]` Professors de EDA. (2023). *Apunts del moodle de EDA*. EDA, GEINF, UdG.
+
+- `[apuntsMTP]` Professors de $MTP_{1 \lor 2}$. (2022). *Apunts del moodle de MTP1 i MTP2*. $MTP_{1 \lor 2}$, GEINF, UdG.
