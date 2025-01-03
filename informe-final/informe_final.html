@@ -357,9 +357,11 @@ display: none;
 
 <div id="introducció" class="section level1">
 <h1>Introducció</h1>
-<p>Breu introducció del treball: contextualitzeu les dades analitzades i
-l’objectiu principal del vostre estudi. <em>(Opcional, màxim 100
-paraules).</em></p>
+<p>La pregunta inicial era: Quin algoritme d’ordenació és millor?
+Nosaltres la vam transformar en quin algoritme d’ordenació és més
+eficaç? Entenent eficacia com l’eficiència dels algoritmes, o sigui,
+quin algoritme d’ordenació és més eficient?</p>
+<p>La següent i principal pregunta és quina és la forma dels errors?</p>
 </div>
 <div id="descriptiva-de-les-dades" class="section level1">
 <h1>Descriptiva de les dades</h1>
@@ -399,25 +401,39 @@ ser <code>summary()</code>.</p>
 ##  Mean   :3.752e-05   Mean   : -7.030   Mean   :-11.281   Mean   :-10.148  
 ##  3rd Qu.:5.630e-05   3rd Qu.: -5.655   3rd Qu.:-10.494   3rd Qu.: -9.420  
 ##  Max.   :1.931e-04   Max.   : -4.774   Max.   : -9.007   Max.   : -8.311</code></pre>
-<p>D’aquí podem veure que el <strong>quicksort</strong> és l’únic
-algoritme que <strong>empitjora amb vectors ordenats el temps d’execució
-(en mitjana)</strong>, mentre que <strong>bubblesort</strong> i
-<strong>mergesort</strong>, <strong>milloren el temps d’execució amb
-vectors ordenats</strong>.</p>
-<p>També vam veure que <strong>les nostres dades no podien seguir una
-normal</strong>, i així ens vam preguntar <strong>quina forma segueixen
-els temps d’execució de cada algoritme amb vectors ordenats i
-desordenats</strong>? I aquesta pregunta la vam respondre
-<strong>visualitzant els temps amb vectors ordenats i
-desordenats</strong>.</p>
+<p>D’aquí podem començar a respondre a la <strong>pregunta
+inicial</strong>. I podem dir que el <strong>quicksort</strong> és
+l’únic algoritme que <strong>empitjora amb vectors ordenats el temps
+d’execució (en mitjana)</strong>, mentre que <strong>bubblesort</strong>
+i <strong>mergesort</strong>, <strong>milloren el temps d’execució amb
+vectors ordenats</strong>. Per tant, <strong>el millor algoritme seria
+aquell que</strong> amb vectors ordenats millora o iguala la mitjana del
+temps, <em>obtinguda amb vectors desordenats</em>, o que manté la forma
+del temps, és a dir, <strong>que és estables</strong>.</p>
+<p>Això mirant la mitjana, però també podríem mirar altres estadístics
+del <code>summary</code>. I també podria ser útil veure quina és la
+correlació entre el temps d’execució i la mida del vector.</p>
+<pre><code>## # A tibble: 1 × 6
+##   bubblesort quicksort mergesort ord.bubblesort ord.quicksort ord.mergesort
+##        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;          &lt;dbl&gt;         &lt;dbl&gt;         &lt;dbl&gt;
+## 1      0.965     0.946     0.957          0.966         0.953         0.950</code></pre>
+<p>I veiem que la variable dependent, <strong>temps d’execució</strong>,
+<strong>té una correlació molt alta amb la variable independent,
+mida</strong>.</p>
 </div>
 <div id="visualització-de-dades" class="section level2">
 <h2>Visualització de dades</h2>
 <div id="temps-dexecució-amb-vectors-ordenats-i-desordenats" class="section level3">
 <h3>Temps d’execució amb vectors ordenats i desordenats</h3>
-<p>Veient-lo gràficament podem veure com es comporta cada algoritme amb
-els dos tipus de vectors, <em>ordenats i desordenats</em>, a més de la
-forma que tenen els temps en relació amb la mida.</p>
+<p>Allò que hem dit de paraula, es veu millor si intentem veure-ho,
+visualitzant els temps de cada algoritme amb <strong>vectors
+desordenats</strong> i <strong>vectors ordenats</strong> amb un
+gràfic.</p>
+<p>D’aquesta manera, podem veure <strong>quina forma segueixen els temps
+d’execució de cada algoritme amb vectors ordenats i
+desordenats</strong>, i podrem saber quin algoritme sembla més estable,
+és a dir, que manté la forma del temps, i a més també podrem veure la
+relació entre el temps d’execució i la mida del vector.</p>
 <div id="section" class="section level4 tabset">
 <h4 class="tabset"></h4>
 <div id="bubblesort-desordenat" class="section level5">
@@ -447,26 +463,31 @@ forma que tenen els temps en relació amb la mida.</p>
 </div>
 <div id="section-1" class="section level4 end">
 <h4 class="end"></h4>
-<p>I d’aquí podem veure que <strong>bubblesort</strong> i
+<p>I podem veure que <strong>bubblesort</strong> i
 <strong>mergesort</strong> mantenen la forma amb els dos tipus de
 vectors, mentre <strong>quicksort</strong> amb <strong>vectors
 desordenats es comporta com el mergesort</strong>, i amb <strong>vectors
-ordenats es comporta com el bubblesort</strong>. I podem veure que això
-té relació amb l’explicat a altres assignatures de programació com <span class="math inline">\(MTP_{1 \lor 2} \lor EDA\)</span>.</p>
-<p><strong>Relacionat amb l’estudi dels errors</strong>, podem veure que
-<strong>els algoritmes que tenen una implementació recursiva són els que
-també semblaven més homocedastics</strong>, <em>tot i no ser-ho</em>.
-Però això sorgeix amb el plantejament de l’hipòtesi.</p>
+ordenats es comporta com el bubblesort</strong>. Això té relació amb
+l’explicat a altres assignatures de programació com <span class="math inline">\(MTP_{1 \lor 2} \lor EDA\)</span>.</p>
+<p>A partir d’aquí ja hem respost la pregunta de quin algoritme sembla
+millor, <em>o més eficient</em>, en aquest cas <strong>quicksort sembla
+millor</strong>, però <strong>mergesort és més estable</strong>, és a
+dir, mergesort manté la forma del temps, <strong>bubblesort també manté
+la forma</strong>, però és de la forma <span class="math inline">\(n^2\)</span>, mentre que
+<strong>mergesort</strong> és <span class="math inline">\(n \cdot
+log(n)\)</span>.</p>
 </div>
 </div>
 </div>
 </div>
 <div id="hipòtesi-plantejada" class="section level1">
 <h1>Hipòtesi plantejada</h1>
-<p>Per fer aquesta part vam ajustar els següents models, i per això ens
-hem centrat en <strong>la forma dels errors</strong> dels models que
-ajustats. Els models que hem ajustat treballen amb el <strong>logaritme
-dels temps d’execució</strong>.</p>
+<p>A continuació, ajustarem els següents models que ens ajudaran a
+plantejar la següent pregunta del nostre estudi, <strong>quina és la
+forma dels errors</strong>, aquesta és la pregunta en la qual se centra
+la major part de l’estudi, per tant, ajustarem els models. <em>Els
+models que hem ajustat treballen amb el logaritme del temps
+d’execució</em>.</p>
 <pre><code>## $lm.bubblesort
 ## 
 ## Call:
@@ -497,8 +518,8 @@ dels temps d’execució</strong>.</p>
 ## Coefficients:
 ##             (Intercept)                   l_mida  I(l_mida * log(l_mida))  
 ##               -15.99327                  0.86315                  0.06736</code></pre>
-<p>I podem veure la forma dels residus visualitzant-los amb
-l’histograma.</p>
+<p>I podem veure la forma dels errors, <em>o residus</em>,
+visualitzant-los amb l’histograma.</p>
 <div id="section-2" class="section level3 tabset">
 <h3 class="tabset"></h3>
 <div id="bubblesort" class="section level4">
@@ -519,37 +540,41 @@ l’histograma.</p>
 </div>
 <div id="section-3" class="section level3 end">
 <h3 class="end"></h3>
-<p>La nostra <strong>hipòtesi</strong> plantejada és si hi ha una
-relació entre els errors dels models i la mida del vector, i quina és la
-forma d’aquests errors, <strong>treballant amb el logaritme dels
-temps</strong>.</p>
-<p><strong>A continuació per tenir ordenats els contrastos</strong>,
-podem assigna un codi a les diferents hipòtesis.</p>
-<p><code>[contrast de normalitat]</code>. Per <strong>respondre a la
-nostra hipòtesi</strong>, podem platejar les següents hipòtesi sobre els
-errors dels models.</p>
+<p>La nostra <strong>hipòtesi plantejada</strong> és si <strong>hi ha
+una relació entre els errors dels models i la mida del vector</strong>,
+i <strong>quina és la forma d’aquests errors</strong>, <em>treballant
+amb el logaritme del temps</em>.</p>
+<blockquote>
+<p>I per tenir ordenats els contrastos els hi podem assignar un codi.
+p.e. <code>[contrast de normalitat]</code>, pel contrast de normalitat,
+i <code>[contrast d&#39;homocedasticitat]</code> pel contrast
+d’homocedasticitat.</p>
+</blockquote>
+<p>El primer contrast, és el <code>[contrast de normalitat]</code>, per
+contrastar la normalitat dels residus.</p>
 <p><span class="math display">\[
 H0: \text{Els residus són normals}\\
 H1: \text{Els residus no són normals}
 \]</span></p>
-<p>Per contrastar la normalitat dels residus.</p>
-<p><code>[contrast d&#39;homocedasticitat]</code>. I també podem plantejar
-el següent per contrastar l’homocedasticitat dels residus.</p>
+<p>I el segón, és el <code>[contrast d&#39;homocedasticitat]</code>, per
+contrastar l’homocedasticitat dels residus.</p>
 <p><span class="math display">\[
 H0: \text{Els residus són homocedastics}\\
 H1: \text{Els residus no són homocedastics}
 \]</span></p>
 <p>Per <strong>respondre a la nostra hipòtesi també podem obtenir
-intervals de confiança</strong>, i entre aquest interval, podem veure si
+intervals de confiança</strong>, i amb aquests intervals podem veure si
 <strong>els residus són més normals</strong>, o no, o si segueixen una
 certa forma.</p>
 <p><strong>Utilitats:</strong></p>
-<p>Per tal construir intervals de confiança amb R, hem programat la
-següent funció (<code>confidence.intervals</code>), que a partir d’una
-mostra, si no és pot assumir normalitat fa servir el <strong>mètode de
-bootstrap</strong>, altrament, si pot fer servir la <strong><span class="math inline">\(t\)</span>-student</strong>, la fa servir,
-altrament, fa servir el <strong>teorema del límit central</strong>.
-D’aquesta forma el procés de construir intervals queda automatitzat.</p>
+<p>Per tal <strong>construir intervals de confiança amb R</strong>, hem
+programat la següent funció (<code>confidence.intervals</code>), que a
+partir d’una mostra, si no és pot assumir normalitat fa servir el
+<strong>mètode de bootstrap</strong>, altrament, si pot fer servir la
+<strong><span class="math inline">\(t\)</span>-student</strong>, la fa
+servir, altrament, fa servir el <strong>teorema del límit
+central</strong>. D’aquesta forma <strong>el procés de construir
+intervals queda automatitzat en una funció</strong>.</p>
 <pre><code>## function(mostra, normalitat = FALSE, t.student = FALSE) {
 ##   # si assumim normalitat apliquem la t-student
 ##   if (normalitat) {
@@ -573,19 +598,25 @@ d’R que ens permeten automatitzar més tasques repetitives.</p>
 </div>
 <div id="assumpcions-seguides" class="section level1">
 <h1>Assumpcions seguides</h1>
-<p>Assumpcions del <code>[contrast de normalitat]</code>.</p>
-<p>Les assumpcions seguides durant l’estudi han estat per poder
-<strong>construir l’interval de confiança en el que sabem que els errors
-intentaven seguir una normal</strong>, hem seguit l’assumpció de què,
-<strong>sabent ja que els residus no són normals</strong>, vam dir,
-<strong>pel teorema del límit central almenys la nostra mostra és
-bastant gran</strong>.</p>
+<p>L’assumpció més important que hem seguit, i que hem contrastat en el
+primer apartat d’aquest informe, és que la variable
+<strong>temps</strong> i la variable <strong>mida</strong>,
+<strong>tenen una correlació molt alta</strong>, i això és possible, ja
+que el <strong>temps</strong> s’ha obtingut a partir de vectors de
+diferents <strong>mides</strong>, o dit d’una altra manera, la variable
+<strong>temps</strong> és una variable dependent, i la variable
+<strong>mida</strong> és una variable independent.</p>
+<p>Hem seguit altres assumpcions, p.e. relacionades amb el
+<code>[contrast de normalitat]</code>. Per tal d’estudiar els errors,
+com que <strong>no podem assumir normalitat dels residus</strong>, podem
+dir, pel <strong>teorema del límit central</strong>, almenys la nostra
+mostra és bastant gran.</p>
 <pre><code>## [1] 5000   12</code></pre>
 <p>Com que <strong>la nostra mostra és bastant gran segons el
-teorema</strong>, podem assumir que <strong>la mitjana de la mostra
-segueix una normal</strong> com.</p>
+teorema</strong>, llavors podem assumir que <strong>la mitjana de la
+mostra segueix una normal</strong> com.</p>
 <p><span class="math display">\[
-\overline{X} = N(\mu_x, \frac{\sigma_x}{\sqrt{n}})
+\overline{X} \approx N(\mu_x, \frac{\sigma_x}{\sqrt{n}})
 \]</span></p>
 <p>Assumpcions del <code>[contrast d&#39;homocedasticitat]</code>.</p>
 <p>Altres assumpcions, hem vist que <strong>no podem assumir una
@@ -642,9 +673,8 @@ li hem de passar els models directament.</p>
 l’homocedasticitat dels residus</strong>. En conclusió, <strong>els
 residus són heterocedastics</strong>, és a dir, que segueixen una
 tendència.</p>
-<p>Com que no els resultats dels contrastos de
-<code>[contrast de normalitat]</code> i
-<code>[contrast d&#39;homocedasticitat]</code> ens ha portat a rebutjar la
+<p>Com que els resultats del <code>[contrast de normalitat]</code> i del
+<code>[contrast d&#39;homocedasticitat]</code> ens han portat a rebutjar la
 hipòtesi nul·la, podem provar de construir intervals de confiança per
 veure si podem assumir algun contrast.</p>
 <p>Aquests intervals els podem construir fent servir la funció
@@ -655,8 +685,8 @@ canviant els residus pels residus dels models.</p>
 <pre><code>## # A tibble: 2 × 3
 ##   bubblesort quicksort mergesort
 ##        &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
-## 1   -0.00198  -0.00333  -0.00397
-## 2    0.00216   0.00355   0.00418</code></pre>
+## 1   -0.00198  -0.00327  -0.00384
+## 2    0.00210   0.00340   0.00416</code></pre>
 <p>I tornem a contrastar <code>[contrast de normalitat]</code> i
 <code>[contrast d&#39;homocedasticitat]</code> amb les funcions
 <code>shapiro.test()</code> i <code>bptest()</code> respectivament.</p>
@@ -664,12 +694,12 @@ canviant els residus pels residus dels models.</p>
 ##  Shapiro-Wilk normality test
 ## 
 ## data:  residuals(mods.log$lm.bubblesort)[between(residuals(mods.log$lm.bubblesort), int$bubblesort[1], int$bubblesort[2])]
-## W = 0.95313, p-value = 2.09e-07</code></pre>
+## W = 0.95293, p-value = 2.181e-07</code></pre>
 <pre><code>## 
 ##  Shapiro-Wilk normality test
 ## 
 ## data:  residuals(mods.log$lm.quicksort)[between(residuals(mods.log$lm.quicksort), int$quicksort[1], int$quicksort[2])]
-## W = 0.96102, p-value = 2.87e-07</code></pre>
+## W = 0.96082, p-value = 4.539e-07</code></pre>
 <pre><code>## 
 ##  Shapiro-Wilk normality test
 ## 
@@ -679,10 +709,19 @@ canviant els residus pels residus dels models.</p>
 sense poder assumir normalitat dels residus.</p>
 <p>I no podem respondre el <code>[contrast d&#39;homocedasticitat]</code>,
 ja que a la funció <code>bptest()</code> li pasem els models ajustats,
-de totes maneres si no podem homocedasticitat, els intervals de
-confiança no ens aporten res de nou.</p>
-<p>Si visualitzem els errors veiem que tot i no ser homocedastics, ho
-semblen bastant.</p>
+de totes maneres si no podem homocedasticitat ni normalitat, els
+intervals de confiança no ens aporten res de nou.</p>
+<div id="anàlisi-de-resultats" class="section level2">
+<h2>Anàlisi de resultats</h2>
+<p>El <code>[contrast de normalitat]</code> i el
+<code>[contrast d&#39;homocedasticitat]</code> ens han donat un <span class="math inline">\(valor-p &lt; \alpha\)</span>, on <span class="math inline">\(\alpha = 0.05\)</span>. Per tant, no podem assumir
+normalitat dels residus, i els intervals de confiança tampoc ens aporten
+res de nou, per tant, podem dir que els residus dels models ajustats no
+són normals. Sí que podem dir que la mitjana segueix una normal,
+<strong>pel teorema del límit central</strong>.</p>
+<p>I tot i que el <code>[contrast d&#39;homocedasticitat]</code> ens diu que
+els residus no són homocedastics, en realitat <strong>ho semblen
+bastant</strong>.</p>
 <div id="section-4" class="section level3 tabset">
 <h3 class="tabset"></h3>
 <div id="bubblesort-desordenat-1" class="section level4">
@@ -700,15 +739,13 @@ semblen bastant.</p>
 </div>
 <div id="section-5" class="section level3 end">
 <h3 class="end"></h3>
-<p>Aplicant una transformació logarítmica els residus estan més a prop
-de ser homocedastics, tot i que el test d’homocedasticitat ens dona un
-<span class="math inline">\(valor-p &lt; \alpha\)</span>. Potser en
-aquest test devem estar veient un <strong>error tipus 1</strong>,
-rebutjar <span class="math inline">\(H_0\)</span> quan és certa, en tot
-cas hauríem de calcular la <span class="math inline">\(P(\text{rebutjar
-}H_0 | H_0\text{ és certa})\)</span>.</p>
-<p>Finalment, observant els gràfics veiem que segueixen o no una
-tendència, vam pensar que els errors es podien ajustar a un
+<p>Finalment, observant els gràfics veiem que no semblen seguir cap
+tendència, tot i que el test d’homocedasticitat ens dona un <span class="math inline">\(valor-p &lt; \alpha\)</span>. Potser en aquest
+test devem estar veient un <strong>error tipus 1</strong>, rebutjar
+<span class="math inline">\(H_0\)</span> quan és certa, en tot cas
+hauríem de calcular la <span class="math inline">\(P(\text{rebutjar }H_0
+| H_0\text{ és certa})\)</span>.</p>
+<p>I a partir d’aquí, podem pensar que els errors es poden ajustar a una
 <code>skew normal</code>.</p>
 </div>
 <div id="section-6" class="section level3 tabset">
@@ -731,11 +768,9 @@ tendència, vam pensar que els errors es podien ajustar a un
 </div>
 <div id="section-7" class="section level3 end">
 <h3 class="end"></h3>
-<p>I aquí vam arribar a la conclusió de que <strong>els residus dels
-diferents models segueixen una skew normal amb <span class="math inline">\(\alpha \pm 4\)</span></strong>.</p>
+<p>I per acabar, podem arribar a la conclusió de què <strong>els residus
+dels diferents models segueixen una skew normal amb <span class="math inline">\(\alpha \pm 4\)</span></strong>.</p>
 </div>
-<div id="anàlisi-de-resultats" class="section level2">
-<h2>Anàlisi de resultats</h2>
 </div>
 <div id="conclusió" class="section level2">
 <h2>Conclusió</h2>
@@ -748,12 +783,14 @@ quicksort i el mergesort amb la forma <span class="math inline">\(O(n
 \cdot log(n))\)</span> segueixen més el logaritme que una normal. I quan
 diem que el bubblesort segueix una normal, en realitat volem dir que
 segueix una normal amb un biaix cap al 0, <em>cap a l’esquerra</em>, o
-una skew normal amb <span class="math inline">\(\alpha \pm
-4\)</span>.</p>
+una skew normal amb <span class="math inline">\(\alpha \pm 4\)</span>,
+encara que tampoc semblen seguir aquesta distribució. En realitat els
+residus segueixen el logaritme, a conseqüència de la transformació
+logarítmica dels temps, que hem fet a l’inici de l’estudi.</p>
 <p>També és interessant que treballant amb el logaritme dels temps el
 test d’homoscedasticitat ens porta a rebutjar la hipòtesi nul·la, però
 veient els gràfics, veiem que els residus no semblen seguir cap
-tendència.</p>
+tendència, és a dir, els residus semblen heterocedastics.</p>
 </blockquote>
 </div>
 </div>
